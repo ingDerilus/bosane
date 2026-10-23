@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BoSane</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1f6fb2">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BoSane">
 <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&display=swap'>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -1146,7 +1153,7 @@ mp.className=mnuS?'open':'';document.getElementById('mwho').style.display=mnuS==
 if(!mnuS){dy.innerHTML='';return}
 const it=(k,i,l)=>`<button class='mi2' data-mnu='${k}'>${svg(i,22)}<span>${l}</span></button>`;
 dy.innerHTML=mnuS==='plus'?it('post','edit',T3('Publication','Piblikasyon','Post'))+it('photo','camera',T3('Photo','Foto','Photo'))+it('story','clock',T3('Story (48 h)','Istwa (48 è)','Story (48 h)')):
-((me!=='admin'&&by[me]?it('profile','user',by[me].n):'')+it('big','eye',(BIG?'✓ ':'')+T3('Texte agrandi','Tèks pi gwo','Larger text'))+it('about','info',T3('À propos de BoSane','Sou BoSane','About BoSane'))+(SERVER&&ISADM&&!MYDB?it('claim','user',T3('Relier mon compte à un membre','Konekte kont mwen ak yon manm','Link my account to a member')):'')+(SERVER?it('reset','unlock',T3('Se déconnecter','Dekonekte','Sign out')):it('reset','trash',T3('Réinitialiser la démo','Rekòmanse demo a','Reset the demo')))+`<div class='mi2' style='cursor:default'>${svg('globe',22)}<select id='lang' aria-label='Langue' style='flex:1'>${Object.keys(LANGS).map(k=>`<option value='${k}'${k===lang?' selected':''}>${LANGS[k].l}</option>`).join('')}</select></div>`)}
+((me!=='admin'&&by[me]?it('profile','user',by[me].n):'')+it('big','eye',(BIG?'✓ ':'')+T3('Texte agrandi','Tèks pi gwo','Larger text'))+(STANDALONE?'':it('install','plus',T3('Installer l’application','Enstale aplikasyon an','Install the app')))+it('about','info',T3('À propos de BoSane','Sou BoSane','About BoSane'))+(SERVER&&ISADM&&!MYDB?it('claim','user',T3('Relier mon compte à un membre','Konekte kont mwen ak yon manm','Link my account to a member')):'')+(SERVER?it('reset','unlock',T3('Se déconnecter','Dekonekte','Sign out')):it('reset','trash',T3('Réinitialiser la démo','Rekòmanse demo a','Reset the demo')))+`<div class='mi2' style='cursor:default'>${svg('globe',22)}<select id='lang' aria-label='Langue' style='flex:1'>${Object.keys(LANGS).map(k=>`<option value='${k}'${k===lang?' selected':''}>${LANGS[k].l}</option>`).join('')}</select></div>`)}
 const rl2=renderLogoTab;renderLogoTab=function(){rl2();renderStory();renderMenu();document.body.style.overflow=(cs!=null||svs||sed)?'hidden':''};
 const rf2=renderFeed;renderFeed=function(){rf2();if(tab!=='feed')return;const f=document.getElementById('feed'),cp=f.querySelector('.comp');
 const row=storyRow()+`<div class='sortb'><button class='pill gh${mode==='top'?' on':''}' data-mode='top'></button><button class='pill gh${mode==='time'?' on':''}' data-mode='time'></button></div>`;
@@ -1369,7 +1376,7 @@ function authScreen(k,err,cancel){const a=document.getElementById('auth'),b=docu
 const E=err?`<div class='aerr'>${esc(err)}</div>`:'';
 if(k==='wait')b.innerHTML=`<div class='path'>${T3('Connexion…','Koneksyon…','Connecting…')}</div>`;
 else if(k==='fail')b.innerHTML=`<div>${T3('Impossible de charger BoSane. Vérifiez votre connexion internet, puis rechargez la page.','Nou pa ka chaje BoSane. Verifye entènèt ou, epi rechaje paj la.','Cannot load BoSane. Check your internet connection, then reload the page.')}</div>`;
-else if(k==='email')b.innerHTML=`<div><b>${T3('Connexion','Koneksyon','Sign in')}</b></div><div class='path'>${T3('Entrez votre adresse e-mail : vous recevrez un code.','Antre adrès imèl ou : w ap resevwa yon kòd.','Enter your email address: you will receive a code.')}</div><input id='aemail' type='email' autocomplete='email' placeholder='nom@exemple.com' value='${esc(AEMAIL)}'><button class='pill' id='asendmail'>${T3('Recevoir mon code','Resevwa kòd mwen','Get my code')}</button>${E}`;
+else if(k==='email')b.innerHTML=`<div><b>${T3('Connexion','Koneksyon','Sign in')}</b></div><div class='path'>${T3('Entrez votre adresse e-mail : vous recevrez un lien de connexion.','Antre adrès imèl ou : w ap resevwa yon lyen pou konekte.','Enter your email address: you will receive a sign-in link.')}</div><input id='aemail' type='email' autocomplete='email' placeholder='nom@exemple.com' value='${esc(AEMAIL)}'><button class='pill' id='asendmail'>${T3('Recevoir mon lien','Resevwa lyen mwen','Get my link')}</button>${E}`;
 else if(k==='code')b.innerHTML=`<div><b>📩 ${T3('Vérifiez vos e-mails','Gade imèl ou','Check your email')}</b></div><div style='margin:10px 0'>${T3('Un message a été envoyé à','Nou voye yon mesaj bay','A message was sent to')} <b>${esc(AEMAIL)}</b>.</div><div>${T3('Ouvrez-le <b>sur cet appareil</b> et touchez <b>« Sign in »</b> : vous serez connecté automatiquement.','Louvri l <b>sou aparèy sa a</b> epi peze <b>« Sign in »</b> : w ap konekte otomatikman.','Open it <b>on this device</b> and tap <b>“Sign in”</b>: you will be signed in automatically.')}</div><div class='path' style='margin-top:14px'>${T3('Vous avez reçu un code à chiffres ? Entrez-le ici :','Ou resevwa yon kòd ak chif ? Antre l la :','Got a number code? Enter it here:')}</div><input id='acode' inputmode='numeric' autocomplete='one-time-code' maxlength='10' placeholder='123456'><button class='pill' id='averify'>${T3('Valider','Valide','Confirm')}</button>${E}<button class='lk' id='aback'>${T3('Changer d’adresse ou renvoyer le code','Chanje adrès oswa revoye kòd la','Change address or resend the code')}</button>`;
 else if(k==='claim')b.innerHTML=`<div><b>${T3('Bienvenue dans BoSane !','Byenveni nan BoSane !','Welcome to BoSane!')}</b></div><div class='path'>${T3('Entrez le code d’invitation que votre famille vous a transmis.','Antre kòd envitasyon fanmi ou te ba ou a.','Enter the invitation code your family gave you.')}</div><input id='aclaim' autocapitalize='characters' maxlength='12' placeholder='AB12CD34'><button class='pill' id='aclaimbtn'>${T3('Rejoindre ma famille','Rejwenn fanmi mwen','Join my family')}</button>${E}${cancel?`<button class='lk' id='aclose'>${T3('Annuler','Anile','Cancel')}</button>`:`<button class='lk' id='alogout'>${T3('Se déconnecter','Dekonekte','Sign out')}</button>`}`;
 const f=b.querySelector('input');if(f)setTimeout(()=>f.focus(),50)}
@@ -1572,6 +1579,24 @@ async function BOOT(){if(!SB){authScreen('fail');return}authScreen('wait');
 SB.auth.onAuthStateChange((ev,ss)=>{if(ev==='SIGNED_IN'&&ss&&ss.user&&!READY)setTimeout(()=>afterLogin(ss.user),0)});
 const hErr=new URLSearchParams(location.hash.slice(1)).get('error_description');if(hErr){history.replaceState(null,'',location.pathname);authScreen('email',T3('Le lien a expiré ou a déjà servi. Demandez-en un nouveau.','Lyen an ekspire oswa li deja sèvi. Mande yon lòt.','The link expired or was already used. Request a new one.'));return}
 try{const {data}=await SB.auth.getSession();if(data&&data.session)await afterLogin(data.session.user);else authScreen('email')}catch(e){authScreen('email',e.message)}}
+
+
+// ===== Application installable (PWA) =====
+const STANDALONE=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+let DEFI=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();DEFI=e;if(READY&&tab==='feed')render()});
+window.addEventListener('appinstalled',()=>{DEFI=null;toast(T3('BoSane est installé sur votre écran d’accueil 🎉','BoSane enstale sou ekran lakay ou 🎉','BoSane is installed on your home screen 🎉'))});
+if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+let instHide=false;try{instHide=localStorage.getItem('bosane-inst-hide')==='1'}catch(e){}
+async function installApp(){
+if(DEFI){DEFI.prompt();try{await DEFI.userChoice}catch(e){}DEFI=null;render();return}
+toast(isIOS?T3('Touchez le bouton Partager ⬆️ en bas, puis « Sur l’écran d’accueil ».','Peze bouton Pataje ⬆️ anba a, epi « Sou ekran lakay ».','Tap the Share button ⬆️, then “Add to Home Screen”.')
+ :T3('Ouvrez le menu ⋮ de Chrome, puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».','Louvri meni ⋮ Chrome, epi « Enstale aplikasyon » oswa « Ajoute sou ekran lakay ».','Open Chrome’s ⋮ menu, then “Install app” or “Add to Home screen”.'))}
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+if(d.mnu==='install'||d.inst){e.stopPropagation();mnuS=null;if(d.inst==='hide'){instHide=true;try{localStorage.setItem('bosane-inst-hide','1')}catch(_){}render();return}renderMenu();installApp()}},true);
+const rPwa=render;render=function(){rPwa();
+if(tab==='feed'&&!STANDALONE&&!instHide&&(DEFI||isIOS)){const f=document.getElementById('feed');if(f&&!f.querySelector('.instc'))f.insertAdjacentHTML('afterbegin',`<div class='comp instc uc' style='display:flex;align-items:center;gap:12px'><img src='icon-192.png' width='44' height='44' alt='' style='border-radius:10px'><div style='flex:1;min-width:0'><b>${T3('Installer BoSane','Enstale BoSane','Install BoSane')}</b><div class='path'>${T3('Ouvrez la famille d’un seul geste, depuis votre écran d’accueil.','Louvri fanmi an yon sèl kou, sou ekran lakay ou.','Open your family in one tap, from your home screen.')}</div></div><button class='pill' data-inst='go'>${T3('Installer','Enstale','Install')}</button><button class='lk' data-inst='hide' aria-label='${T3('Masquer','Kache','Hide')}'>✕</button></div>`)}};
 
 BOOT();
 const wr0=document.querySelector('.wrap');if(wr0)wr0.scrollLeft=(wr0.scrollWidth-wr0.clientWidth)/2;

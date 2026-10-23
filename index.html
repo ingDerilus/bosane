@@ -1585,7 +1585,7 @@ const w=document.getElementById('who'),ML=meL();if(w){w.innerHTML=(ML&&by[ML]?`<
 // arbre déjà commencé : plus de formulaire « premier couple »
 const rb=document.getElementById('rbtn');if(rb&&P.length){const c=rb.closest('.card');if(c)c.remove()}
 // codes à transmettre
-const CODES2=CODES.filter(c=>!(by[c.m]&&by[c.m].dc)&&(me==='admin'||c.by===UID||(c.an&&c.an===meL())));if(tab==='tree'&&CODES2.length){document.getElementById('pend').insertAdjacentHTML('beforeend',`<div class='card codes uc'><b>🔑 ${T3('Codes d’accès à transmettre','Kòd aksè pou bay','Access codes to pass on')}</b><div class='path'>${T3('Touchez « Inviter » : un message chaleureux à son nom s’ouvre dans WhatsApp, avec son lien et son code.','Peze « Envite » : yon bèl mesaj ak non li ap louvri nan WhatsApp, ak lyen li ak kòd li.','Tap “Invite”: a warm message with their name opens in WhatsApp, with their link and code.')}</div>${CODES2.map(c=>`<div class='req row' style='align-items:center;justify-content:space-between'><span><b>${c.n}</b> <code>${c.code}</code></span><span class='row' style='gap:6px'><button class='pill wabtn' data-winv='${c.code}'>💌 ${T3('Inviter','Envite','Invite')}</button><button class='ghost' data-cpc='${c.code}'>${T3('Copier','Kopye','Copy')}</button></span></div>`).join('')}</div>`)}
+const CODES2=CODES.filter(c=>!(by[c.m]&&by[c.m].dc)&&(me==='admin'||(c.an&&c.an===meL())||(!ISADM&&c.by===UID)));if(tab==='tree'&&CODES2.length){document.getElementById('pend').insertAdjacentHTML('beforeend',`<div class='card codes uc'><b>🔑 ${T3('Codes d’accès à transmettre','Kòd aksè pou bay','Access codes to pass on')}</b><div class='path'>${T3('Touchez « Inviter » : un message chaleureux à son nom s’ouvre dans WhatsApp, avec son lien et son code.','Peze « Envite » : yon bèl mesaj ak non li ap louvri nan WhatsApp, ak lyen li ak kòd li.','Tap “Invite”: a warm message with their name opens in WhatsApp, with their link and code.')}</div>${CODES2.map(c=>`<div class='req row' style='align-items:center;justify-content:space-between'><span><b>${c.n}</b> <code>${c.code}</code></span><span class='row' style='gap:6px'><button class='pill wabtn' data-winv='${c.code}'>💌 ${T3('Inviter','Envite','Invite')}</button><button class='ghost' data-cpc='${c.code}'>${T3('Copier','Kopye','Copy')}</button></span></div>`).join('')}</div>`)}
 // date de naissance modifiable dans « À propos »
 if(tab==='me'&&ptab==='about'&&by[me]&&(!pv||pv===me)){const d=document.getElementById('me');d.insertAdjacentHTML('beforeend',`<div class='comp'><b>🎂 ${T3('Ma date de naissance','Dat nesans mwen','My birthday')}</b><div class='row' style='margin-top:8px;align-items:center'><input id='bdi' type='date' class='efld' style='flex:1;margin:0' value='${BD[me]?isoD(BD[me]):''}'><button class='pill' data-bdsave='1'>${T3('Enregistrer','Anrejistre','Save')}</button></div><div class='path'>${T3('Elle sert aux annonces d’anniversaire.','Li sèvi pou anons anivèsè yo.','Used for birthday announcements.')}</div></div>`)}
 if(READY&&!INTERNAL){DIRTY++;kickSync(350)}};
@@ -1937,6 +1937,34 @@ if(r&&r.error)return toast(r.error.message);
 odlg(null);MMID=null;kickSync(0,true)}
 document.addEventListener('click',e=>{if(!SB)return;const b=e.target.closest('[data-mm],[data-oa^="mm-"]');if(!b)return;e.stopPropagation();e.preventDefault();
 if(b.dataset.mm)mmOpts(b.dataset.mm);else mmAct(b.dataset.oa)},true);
+
+
+// ===== Page « À propos de BoSane » =====
+const ABOUT={
+fr:{t:'Pourquoi BoSane ?',p:[
+'BoSane porte les noms de nos grands-parents, <b>Bob et Rosane</b>. De leur amour est née une grande famille : des enfants, des petits-enfants, des arrière-petits-enfants, des cousins… aujourd’hui dispersés entre <b>Haïti, les États-Unis, le Canada</b> et ailleurs.',
+'Avec les années et la distance, nous avons perdu le contact. Beaucoup d’entre nous ne connaissent pas leurs cousins, n’ont pas le numéro d’un oncle ou d’une tante, et certains enfants grandissent sans savoir d’où ils viennent.',
+'J’ai créé BoSane pour <b>réunir toute la famille</b>. Pour que chacun retrouve sa place dans l’arbre, sache qui est qui, et que nos liens se renouent. Pour que BoSane soit un <b>prétexte pour se parler</b>, se donner des nouvelles, se souhaiter les anniversaires, garder vivante la mémoire de ceux qui nous ont quittés… et, un jour, <b>nous retrouver tous ensemble</b>.'],
+h:'Comment y contribuer',l:['🌳 Ajoutez vos proches dans l’arbre et invitez-les avec 💌','📸 Partagez vos nouvelles, vos photos et vos souvenirs','🎂 Souhaitez les anniversaires, répondez aux événements','📞 Profitez-en pour reprendre contact avec un cousin perdu de vue'],
+pv:'🔒 BoSane est un espace <b>privé</b> : seuls les membres invités de la famille peuvent y entrer.',s:'Samuelson, petit-fils de Bob & Rosane'},
+ht:{t:'Poukisa BoSane ?',p:[
+'BoSane pote non granparan nou, <b>Bob ak Rosane</b>. Lanmou yo bay yon gwo fanmi : pitit, pitit pitit, aryè pitit pitit, kouzen… jodi a yo gaye ant <b>Ayiti, Etazini, Kanada</b> ak lòt kote.',
+'Ak tan ak distans, nou pèdi kontak. Anpil nan nou pa konnen kouzen yo, pa gen nimewo yon tonton oswa yon matant, e gen timoun k ap grandi san yo pa konnen ki kote yo soti.',
+'Mwen kreye BoSane pou <b>rasanble tout fanmi an</b>. Pou chak moun jwenn plas li nan pyebwa a, konnen ki moun ki ki moun, epi pou lyen nou yo renoue. Pou BoSane sèvi yon <b>pretèks pou nou pale</b>, bay nouvèl, swete anivèsè, kenbe memwa moun ki kite nou yo vivan… epi, yon jou, <b>nou tout jwenn ansanm</b>.'],
+h:'Kijan pou w patisipe',l:['🌳 Ajoute fanmi ou nan pyebwa a epi envite yo ak 💌','📸 Pataje nouvèl ou, foto ou ak souvni ou','🎂 Swete anivèsè, reponn evènman yo','📞 Pwofite pou reprann kontak ak yon kouzen ou pa wè lontan'],
+pv:'🔒 BoSane se yon espas <b>prive</b> : se sèlman manm fanmi ki envite ki ka antre.',s:'Samuelson, pitit pitit Bob ak Rosane'},
+en:{t:'Why BoSane?',p:[
+'BoSane carries the names of our grandparents, <b>Bob and Rosane</b>. Their love gave birth to a large family: children, grandchildren, great-grandchildren, cousins… now scattered across <b>Haiti, the United States, Canada</b> and beyond.',
+'Over the years and the distance, we lost touch. Many of us don’t know our cousins, don’t have an uncle’s or aunt’s number, and some children are growing up without knowing where they come from.',
+'I created BoSane to <b>bring the whole family back together</b>. So everyone finds their place in the tree, knows who is who, and our bonds are renewed. So BoSane becomes a <b>reason to talk</b>, share news, wish happy birthdays, keep alive the memory of those who left us… and, one day, <b>all meet again</b>.'],
+h:'How to take part',l:['🌳 Add your relatives to the tree and invite them with 💌','📸 Share your news, photos and memories','🎂 Wish happy birthdays, answer events','📞 Use it to reconnect with a cousin you lost touch with'],
+pv:'🔒 BoSane is a <b>private</b> space: only invited family members can enter.',s:'Samuelson, grandson of Bob & Rosane'}};
+const rlAb=renderLogoTab;renderLogoTab=function(){rlAb();if(tab!=='logo')return;const d=document.getElementById('logo'),A=ABOUT[lang]||ABOUT.fr,n=P.length;
+d.innerHTML=`<div class='comp' style='text-align:center'><img src='${EMB}' width='150' height='150' alt='BoSane'><div><img src='${WM}' alt='BoSane' style='height:36px;width:auto;margin-top:6px'></div><div class='path' style='margin-top:4px'>Bob &amp; Rosane</div></div>
+<div class='comp uc' style='line-height:1.6'><h2 style='margin:0 0 10px;font-size:1.25rem'>${A.t}</h2>${A.p.map(x=>`<p style='margin:0 0 12px'>${x}</p>`).join('')}<p style='margin:14px 0 0;text-align:right;font-style:italic'>— ${A.s}</p></div>
+<div class='comp uc'><b>${A.h}</b><ul style='margin:8px 0 0;padding-left:4px;list-style:none;line-height:1.9'>${A.l.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+${n?`<div class='comp uc' style='text-align:center'><div style='font-size:2rem;font-weight:700;color:var(--bl)'>${n}</div><div class='path'>${T3('membres de la famille déjà réunis dans l’arbre','manm fanmi ki deja reyini nan pyebwa a','family members already gathered in the tree')}</div></div>`:''}
+<div class='comp path uc'>${A.pv}</div>`};
 
 BOOT().finally(hideSplash);setTimeout(hideSplash,7000);
 const wr0=document.querySelector('.wrap');if(wr0)wr0.scrollLeft=(wr0.scrollWidth-wr0.clientWidth)/2;

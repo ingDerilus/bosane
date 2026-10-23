@@ -1354,7 +1354,7 @@ const r12=render;render=function(){r12();save()};
 // ===== Connexion au serveur Supabase (base de données partagée) =====
 // =====================================================================
 const SB_URL='https://mofdfecdiyigeufpnktk.supabase.co',SB_KEY='sb_publishable_7F9ZlxnUFBF_Ct1T6TBTjQ_eZXKSJxs';
-const SB=window.supabase&&window.supabase.createClient?window.supabase.createClient(SB_URL,SB_KEY,{auth:{flowType:'implicit',detectSessionInUrl:true,persistSession:true,autoRefreshToken:true}}):null;
+const SB=window.supabase&&window.supabase.createClient?window.supabase.createClient(SB_URL,SB_KEY,{auth:{flowType:'implicit',detectSessionInUrl:true,persistSession:true,autoRefreshToken:true,lock:async(n,t,fn)=>await fn()}}):null;
 const unesc=s=>String(s==null?'':s).replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
 let UID=null,MYDB=null,ISADM=false,READY=false,SNAP=null,CODES=[],DIRTY=0,INTERNAL=false;
 let syncing=false,loading=false,againLoad=false,againSync=false,tSync=null,forceNext=false,FIRST=true;
@@ -1384,7 +1384,9 @@ document.body.insertAdjacentHTML('beforeend',`<div id='auth'><div class='abox'><
 let AEMAIL='';
 function authScreen(k,err,cancel){const a=document.getElementById('auth'),b=document.getElementById('abody');a.classList.remove('hide');
 const E=err?`<div class='aerr'>${esc(err)}</div>`:'';
-if(k==='wait')b.innerHTML=`<div class='path'>${T3('Connexion…','Koneksyon…','Connecting…')}</div>`;
+clearTimeout(window.WAITT);
+if(k==='wait'){b.innerHTML=`<div class='path'>${T3('Connexion…','Koneksyon…','Connecting…')}</div>`;window.WAITT=setTimeout(()=>{const a=document.getElementById('auth');if(a&&!a.classList.contains('hide')&&document.getElementById('abody').textContent.match(/Connexion…|Koneksyon…|Connecting…/))authScreen('stuck')},15000)}
+else if(k==='stuck')b.innerHTML=`<div><b>${T3('La connexion prend du temps','Koneksyon an ap pran tan','Connection is taking a while')}</b></div><div class='path' style='margin:8px 0'>${T3('Vérifiez votre internet, puis réessayez.','Verifye entènèt ou, epi eseye ankò.','Check your internet, then try again.')}</div>${LASTERR?`<div class='path' style='font-size:.75rem;word-break:break-word;opacity:.8'>${esc(LASTERR.slice(0,160))}</div>`:''}<button class='pill' id='aretry'>${T3('Réessayer','Eseye ankò','Try again')}</button><button class='lk' id='alogout'>${T3('Se déconnecter','Dekonekte','Sign out')}</button>`;
 else if(k==='fail')b.innerHTML=`<div>${T3('Impossible de charger BoSane. Vérifiez votre connexion internet, puis rechargez la page.','Nou pa ka chaje BoSane. Verifye entènèt ou, epi rechaje paj la.','Cannot load BoSane. Check your internet connection, then reload the page.')}</div>`;
 else if(k==='email')b.innerHTML=`<div><b>${T3('Connexion','Koneksyon','Sign in')}</b></div><div class='path'>${T3('Entrez votre adresse e-mail : vous recevrez un lien de connexion.','Antre adrès imèl ou : w ap resevwa yon lyen pou konekte.','Enter your email address: you will receive a sign-in link.')}</div><input id='aemail' type='email' autocomplete='email' placeholder='nom@exemple.com' value='${esc(AEMAIL)}'><button class='pill' id='asendmail'>${T3('Recevoir mon lien','Resevwa lyen mwen','Get my link')}</button>${E}`;
 else if(k==='code')b.innerHTML=`<div><b>📩 ${T3('Vérifiez vos e-mails','Gade imèl ou','Check your email')}</b></div><div style='margin:10px 0'>${T3('Un message a été envoyé à','Nou voye yon mesaj bay','A message was sent to')} <b>${esc(AEMAIL)}</b>.</div><div>${T3('Ouvrez-le <b>sur cet appareil</b> et touchez <b>« Sign in »</b> : vous serez connecté automatiquement.','Louvri l <b>sou aparèy sa a</b> epi peze <b>« Sign in »</b> : w ap konekte otomatikman.','Open it <b>on this device</b> and tap <b>“Sign in”</b>: you will be signed in automatically.')}</div><div class='path' style='margin-top:14px'>${T3('Vous avez reçu un code à chiffres ? Entrez-le ici :','Ou resevwa yon kòd ak chif ? Antre l la :','Got a number code? Enter it here:')}</div><input id='acode' inputmode='numeric' autocomplete='one-time-code' maxlength='10' placeholder='123456'><button class='pill' id='averify'>${T3('Valider','Valide','Confirm')}</button>${E}<button class='lk' id='aback'>${T3('Changer d’adresse ou renvoyer le code','Chanje adrès oswa revoye kòd la','Change address or resend the code')}</button>`;
@@ -1396,6 +1398,7 @@ if(id==='asendmail'){const v=document.getElementById('aemail').value.trim();if(!
 if(id==='averify'){const v=document.getElementById('acode').value.trim();if(!v)return;b.disabled=true;
   const {data,error}=await SB.auth.verifyOtp({email:AEMAIL,token:v,type:'email'});if(error)return authScreen('code',T3('Code incorrect ou expiré','Kòd la pa bon oswa li ekspire','Wrong or expired code'));await afterLogin(data.user||(data.session&&data.session.user))}
 if(id==='aback')authScreen('email');
+if(id==='aretry')location.reload();
 if(id==='alogout')LOGOUT();
 if(id==='aclose'){document.getElementById('auth').classList.add('hide')}
 if(id==='aclaimbtn'){const v=document.getElementById('aclaim').value.trim();if(!v)return;b.disabled=true;
@@ -1404,8 +1407,9 @@ if(id==='aclaimbtn'){const v=document.getElementById('aclaim').value.trim();if(!
 document.getElementById('auth').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const b=document.querySelector('#abody .pill');if(b)b.click()});
 
 async function LOGOUT(){try{await SB.auth.signOut()}catch(e){}location.reload()}
-let INLOGIN=false;
-async function afterLogin(user){if(!user)return authScreen('email');if(INLOGIN||READY)return;INLOGIN=true;try{await afterLogin0(user)}finally{INLOGIN=false}}
+let INLOGIN=false,LASTERR='';
+window.addEventListener('error',e=>{LASTERR=String(e.message||e.error||'')});window.addEventListener('unhandledrejection',e=>{LASTERR=String((e.reason&&(e.reason.message||e.reason))||'')});
+async function afterLogin(user){if(!user)return authScreen('email');if(INLOGIN||READY)return;INLOGIN=true;try{await afterLogin0(user)}catch(e){LASTERR=String(e&&e.message||e);authScreen('stuck')}finally{INLOGIN=false}}
 async function afterLogin0(user){UID=user.id;if(/access_token|error_description/.test(location.hash))history.replaceState(null,'',location.pathname+location.search);authScreen('wait');
 const [a,b]=await Promise.all([SB.rpc('my_profile'),SB.rpc('is_admin')]);
 if(a.error)return authScreen('email',a.error.message);
@@ -1587,9 +1591,10 @@ if(READY&&!INTERNAL){DIRTY++;kickSync(350)}};
 
 // --- démarrage ---
 async function BOOT(){if(!SB){authScreen('fail');return}authScreen('wait');
+const tmo=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);
 SB.auth.onAuthStateChange((ev,ss)=>{if(ev==='SIGNED_IN'&&ss&&ss.user&&!READY)setTimeout(()=>afterLogin(ss.user),0)});
 const hErr=new URLSearchParams(location.hash.slice(1)).get('error_description');if(hErr){history.replaceState(null,'',location.pathname);authScreen('email',T3('Le lien a expiré ou a déjà servi. Demandez-en un nouveau.','Lyen an ekspire oswa li deja sèvi. Mande yon lòt.','The link expired or was already used. Request a new one.'));return}
-try{const {data}=await SB.auth.getSession();if(data&&data.session)await afterLogin(data.session.user);else authScreen('email')}catch(e){authScreen('email',e.message)}}
+try{const {data}=await tmo(SB.auth.getSession(),12000);if(data&&data.session)await afterLogin(data.session.user);else if(!READY&&!INLOGIN)authScreen('email')}catch(e){LASTERR=String(e&&e.message||e);if(!READY)authScreen('stuck')}}
 
 
 // ===== Application installable (PWA) =====

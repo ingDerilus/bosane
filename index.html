@@ -3,6 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="L’espace privé de la famille de Bob &amp; Rosane : photos, nouvelles, anniversaires et souvenirs.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BoSane">
+<meta property="og:title" content="🌳 Rejoins la famille sur BoSane">
+<meta property="og:description" content="L’espace privé de la famille de Bob &amp; Rosane : photos, nouvelles, anniversaires et souvenirs.">
+<meta property="og:image" content="https://ingderilus.github.io/bosane/icon-512.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta property="og:url" content="https://ingderilus.github.io/bosane/">
 <title>BoSane</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f6fb2">
@@ -1571,7 +1580,7 @@ const w=document.getElementById('who'),ML=meL();if(w){w.innerHTML=(ML&&by[ML]?`<
 // arbre déjà commencé : plus de formulaire « premier couple »
 const rb=document.getElementById('rbtn');if(rb&&P.length){const c=rb.closest('.card');if(c)c.remove()}
 // codes à transmettre
-const CODES2=CODES.filter(c=>!(by[c.m]&&by[c.m].dc));if(tab==='tree'&&CODES2.length){document.getElementById('pend').insertAdjacentHTML('beforeend',`<div class='card codes uc'><b>🔑 ${T3('Codes d’accès à transmettre','Kòd aksè pou bay','Access codes to pass on')}</b><div class='path'>${T3('Envoyez à chaque personne son code. Elle ouvre BoSane, se connecte avec son e-mail, puis saisit le code.','Voye kòd chak moun ba li. Li louvri BoSane, li konekte ak imèl li, epi li antre kòd la.','Send each person their code. They open BoSane, sign in with their email, then enter the code.')}</div>${CODES2.map(c=>`<div class='req row' style='align-items:center;justify-content:space-between'><span><b>${c.n}</b> <code>${c.code}</code></span><button class='ghost' data-cpc='${c.code}'>${T3('Copier','Kopye','Copy')}</button></div>`).join('')}</div>`)}
+const CODES2=CODES.filter(c=>!(by[c.m]&&by[c.m].dc));if(tab==='tree'&&CODES2.length){document.getElementById('pend').insertAdjacentHTML('beforeend',`<div class='card codes uc'><b>🔑 ${T3('Codes d’accès à transmettre','Kòd aksè pou bay','Access codes to pass on')}</b><div class='path'>${T3('Touchez « Inviter » : un message chaleureux à son nom s’ouvre dans WhatsApp, avec son lien et son code.','Peze « Envite » : yon bèl mesaj ak non li ap louvri nan WhatsApp, ak lyen li ak kòd li.','Tap “Invite”: a warm message with their name opens in WhatsApp, with their link and code.')}</div>${CODES2.map(c=>`<div class='req row' style='align-items:center;justify-content:space-between'><span><b>${c.n}</b> <code>${c.code}</code></span><span class='row' style='gap:6px'><button class='pill wabtn' data-winv='${c.code}'>💌 ${T3('Inviter','Envite','Invite')}</button><button class='ghost' data-cpc='${c.code}'>${T3('Copier','Kopye','Copy')}</button></span></div>`).join('')}</div>`)}
 // date de naissance modifiable dans « À propos »
 if(tab==='me'&&ptab==='about'&&by[me]&&(!pv||pv===me)){const d=document.getElementById('me');d.insertAdjacentHTML('beforeend',`<div class='comp'><b>🎂 ${T3('Ma date de naissance','Dat nesans mwen','My birthday')}</b><div class='row' style='margin-top:8px;align-items:center'><input id='bdi' type='date' class='efld' style='flex:1;margin:0' value='${BD[me]?isoD(BD[me]):''}'><button class='pill' data-bdsave='1'>${T3('Enregistrer','Anrejistre','Save')}</button></div><div class='path'>${T3('Elle sert aux annonces d’anniversaire.','Li sèvi pou anons anivèsè yo.','Used for birthday announcements.')}</div></div>`)}
 if(READY&&!INTERNAL){DIRTY++;kickSync(350)}};
@@ -1696,6 +1705,104 @@ if(ISADM)h+=`<div class='comp memc'><h3>👑 ${T3('Gérer la page souvenir','Jer
 <div class='path' style='margin-top:6px'>${T3('Vidéo de 50 Mo au maximum (environ 1 à 2 minutes).','Videyo 50 Mo maks (anviwon 1 a 2 minit).','Video up to 50 MB (about 1–2 minutes).')}</div></div>`;
 pc.insertAdjacentHTML('afterend',h)};
 
+
+// ===== Invitations chaleureuses (WhatsApp, partage) =====
+const SITE='https://ingderilus.github.io/bosane/';
+// le lien d'invitation contient le code : on le garde pour le pré-remplir
+(function(){const q=new URLSearchParams(location.search).get('code');if(q){try{localStorage.setItem('bosane-code',q.toUpperCase().slice(0,12))}catch(e){}history.replaceState(null,'',location.pathname+location.hash)}})();
+const savedCode=()=>{try{return localStorage.getItem('bosane-code')||''}catch(e){return ''}};
+const aS0=authScreen;authScreen=function(k,err,cancel){aS0(k,err,cancel);if(k==='claim'){const c=savedCode(),i=document.getElementById('aclaim');if(c&&i&&!i.value){i.value=c;i.insertAdjacentHTML('afterend',`<div class='path' style='color:#2e9e5b;margin-top:-6px'>✔ ${T3('Code de votre invitation détecté','Kòd envitasyon ou detekte','Invitation code detected')}</div>`)}}
+ if(k==='email'&&savedCode()){const b=document.getElementById('abody');b.insertAdjacentHTML('afterbegin',`<div style='font-size:1.6rem'>🌳</div><div style='margin-bottom:6px'><b>${T3('Votre famille vous attend !','Fanmi ou ap tann ou !','Your family is waiting!')}</b></div>`)}};
+document.addEventListener('click',e=>{if(e.target.id==='aclaimbtn')setTimeout(()=>{if(MYDB){try{localStorage.removeItem('bosane-code')}catch(_){}}},4000)},true);
+
+const lc=s=>s?s.charAt(0).toLowerCase()+s.slice(1):s;
+function invText(code,member,L2,custom){const N=by[member]?unesc(by[member].n):'',ML=meL(),me0=ML&&by[ML]?unesc(by[ML].n):'';
+let r='',rT='';if(ML&&by[member]&&member!==ML){const t=rel(member,ML).t;if(t&&t!=='Vous'&&t!=='Lien indirect'&&!/ de /.test(t)){r=t;if(L2!=='fr'){const l0=lang;lang=L2;try{rT=ui(t)}finally{lang=l0}if(rT===t)rT=''}}}
+const link=`${SITE}?code=${code}`;
+const who={fr:me0?(r?`Ton ${lc(r)} ${me0}`.replace(/^Ton (\S+e) /,(m,w)=>/(sœur|mère|tante|cousine|nièce|épouse|fille|belle-|grand-mère|demi-sœur)/.test(w)?`Ta ${w} `:m):me0):'La famille',
+ ht:me0?(rT?`${rT} ou ${me0}`:me0):'Fanmi an',en:me0?(rT?`Your ${lc(rT)} ${me0}`:me0):'Your family'}[L2];
+const msg={
+fr:`🌳 Bonjour ${N} !
+
+${who} t’invite à rejoindre *BoSane*, l’espace privé de la famille de Bob & Rosane 💛
+
+Tu y retrouveras toute la famille : les photos, les nouvelles, les anniversaires et nos souvenirs, rien que pour nous.
+${custom?`\n💬 « ${custom} »\n`:''}
+👉 Touche ce lien : ${link}
+🔑 Ton code : *${code}*
+
+C’est simple : entre ton adresse e-mail, touche le lien que tu recevras, et ta place dans l’arbre t’attend.
+
+À très vite parmi nous ! 🤗`,
+ht:`🌳 Bonjou ${N} !
+
+${who} ap envite w antre nan *BoSane*, espas prive fanmi Bob & Rosane 💛
+
+W ap jwenn tout fanmi an la : foto, nouvèl, anivèsè ak souvni nou, pou nou sèlman.
+${custom?`\n💬 « ${custom} »\n`:''}
+👉 Peze lyen sa a : ${link}
+🔑 Kòd ou : *${code}*
+
+Li fasil : mete adrès imèl ou, peze lyen w ap resevwa a, epi plas ou nan pyebwa a ap tann ou.
+
+N ap tann ou ! 🤗`,
+en:`🌳 Hi ${N}!
+
+${who} invites you to join *BoSane*, the private space of Bob & Rosane’s family 💛
+
+You’ll find the whole family there: photos, news, birthdays and our memories, just for us.
+${custom?`\n💬 “${custom}”\n`:''}
+👉 Tap this link: ${link}
+🔑 Your code: *${code}*
+
+It’s easy: enter your email, tap the link you receive, and your place in the family tree is waiting.
+
+See you soon! 🤗`}[L2];
+return msg}
+
+document.head.insertAdjacentHTML('beforeend',`<style>
+#invdlg{position:fixed;inset:0;z-index:160;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+#invdlg .box{background:var(--card);width:100%;max-width:520px;max-height:92vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+#invdlg .lgs{display:flex;gap:6px;margin:10px 0}
+#invdlg .lgs button{flex:1;padding:8px;border-radius:20px;border:1px solid var(--line);background:var(--bg);color:var(--txt);font:inherit}
+#invdlg .lgs button.on{background:var(--bl);color:#fff;border-color:var(--bl)}
+#invdlg .prev{white-space:pre-wrap;background:#e7f7dc;color:#111;border-radius:12px 12px 12px 2px;padding:12px;font-size:.92rem;line-height:1.4;margin:8px 0;max-height:38vh;overflow-y:auto}
+.wabtn{background:#25d366!important;border-color:#25d366!important;color:#fff!important}
+#invdlg input,#invdlg textarea{width:100%;font:inherit;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--txt);margin-top:6px}
+</style>`);
+let IVT=null;
+function openInv(code,member){IVT={code,member,L:(meL()&&PL[meL()])||lang,custom:''};drawInv()}
+function drawInv(){let d=document.getElementById('invdlg');if(!IVT){if(d)d.remove();return}
+const n=by[IVT.member]?by[IVT.member].n:'',txt=invText(IVT.code,IVT.member,IVT.L,unesc(IVT.custom).trim());
+const h=`<div class='box'><b>💌 ${T3('Inviter','Envite','Invite')} ${n}</b>
+<div class='lgs'>${[['fr','Français'],['ht','Kreyòl'],['en','English']].map(([k,l])=>`<button data-ilg='${k}' class='${IVT.L===k?'on':''}'>${l}</button>`).join('')}</div>
+<label class='path'>${T3('Un petit mot personnel (facultatif)','Yon ti mo pèsonèl (si w vle)','A personal note (optional)')}</label>
+<textarea id='icust' rows='2' maxlength='300' placeholder='${T3('Ex. : On a hâte de te voir parmi nous !','Egz. : Nou pare pou n wè w !','E.g. We can’t wait to see you!')}'>${IVT.custom}</textarea>
+<div class='path' style='margin-top:10px'>${T3('Aperçu du message','Apèsi mesaj la','Message preview')}</div>
+<div class='prev'>${esc(txt)}</div>
+<label class='path'>${T3('Numéro WhatsApp (facultatif, avec l’indicatif : +509…)','Nimewo WhatsApp (si w vle, ak endikatif : +509…)','WhatsApp number (optional, with country code: +509…)')}</label>
+<input id='iphone' type='tel' inputmode='tel' placeholder='+509 …' value='${IVT.phone||''}'>
+<div class='row' style='flex-wrap:wrap;gap:8px;margin-top:14px'>
+<button class='pill wabtn' data-iwa='1' style='flex:1 1 100%'>🟢 ${T3('Envoyer sur WhatsApp','Voye sou WhatsApp','Send on WhatsApp')}</button>
+${navigator.share?`<button class='pill gh' data-ish='1' style='flex:1'>📤 ${T3('Autre application','Lòt aplikasyon','Other app')}</button>`:''}
+<button class='pill gh' data-icp='1' style='flex:1'>📋 ${T3('Copier','Kopye','Copy')}</button>
+<button class='pill gh' data-ix='1' style='flex:1'>${T3('Fermer','Fèmen','Close')}</button></div></div>`;
+if(!d){document.body.insertAdjacentHTML('beforeend',`<div id='invdlg'>${h}</div>`)}else{const f=document.activeElement&&document.activeElement.id;d.innerHTML=h;if(f==='icust'){const t=document.getElementById('icust');t.focus();t.setSelectionRange(t.value.length,t.value.length)}}}
+document.addEventListener('input',e=>{if(!IVT)return;if(e.target.id==='icust'){IVT.custom=esc(e.target.value);const p=document.querySelector('#invdlg .prev');if(p)p.textContent=invText(IVT.code,IVT.member,IVT.L,e.target.value.trim())}if(e.target.id==='iphone')IVT.phone=e.target.value.replace(/[^\d+ ]/g,'')});
+document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+if(d.winv){e.stopPropagation();const c=CODES.find(x=>x.code===d.winv);if(c)openInv(c.code,c.m);return}
+if(!IVT)return;
+if(e.target.id==='invdlg'){IVT=null;drawInv();return}
+const txt=()=>invText(IVT.code,IVT.member,IVT.L,unesc(IVT.custom).trim());
+if(d.ilg){IVT.L=d.ilg;drawInv();return}
+if(d.iwa){const ph=(IVT.phone||'').replace(/\D/g,'');window.open(`https://wa.me/${ph}?text=${encodeURIComponent(txt())}`,'_blank');return}
+if(d.ish){try{await navigator.share({title:'BoSane',text:txt()})}catch(_){}return}
+if(d.icp){try{await navigator.clipboard.writeText(txt());toast(T3('Message copié','Mesaj kopye','Message copied'))}catch(_){}return}
+if(d.ix){IVT=null;drawInv()}},true);
+document.addEventListener('click',e=>{if(IVT&&e.target.id==='invdlg'){IVT=null;drawInv()}});
+
+// garde-fou : lien de parenté avec une personne inconnue
+const rel0=rel;rel=function(m,x){if(!by[x]||(m!=='admin'&&!by[m]))return{t:'',c:'al',d:''};return rel0(m,x)};
 BOOT().finally(hideSplash);setTimeout(hideSplash,7000);
 const wr0=document.querySelector('.wrap');if(wr0)wr0.scrollLeft=(wr0.scrollWidth-wr0.clientWidth)/2;
 </script>

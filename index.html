@@ -1595,8 +1595,8 @@ try{const {data}=await SB.auth.getSession();if(data&&data.session)await afterLog
 // ===== Application installable (PWA) =====
 const STANDALONE=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 let DEFI=null;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();DEFI=e;if(READY&&tab==='feed')render()});
-window.addEventListener('appinstalled',()=>{DEFI=null;toast(T3('BoSane est installé sur votre écran d’accueil 🎉','BoSane enstale sou ekran lakay ou 🎉','BoSane is installed on your home screen 🎉'))});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();DEFI=e;try{localStorage.removeItem('bosane-installed')}catch(_){}instBar()});
+window.addEventListener('appinstalled',()=>{DEFI=null;try{localStorage.setItem('bosane-installed','1')}catch(_){}instBar();toast(T3('BoSane est installé sur votre écran d’accueil 🎉','BoSane enstale sou ekran lakay ou 🎉','BoSane is installed on your home screen 🎉'))});
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
 let instHide=false;try{instHide=localStorage.getItem('bosane-inst-hide')==='1'}catch(e){}
@@ -1607,7 +1607,7 @@ toast(isIOS?T3('Touchez le bouton Partager ⬆️ en bas, puis « Sur l’écran
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
 if(d.mnu==='install'||d.inst){e.stopPropagation();mnuS=null;if(d.inst==='hide'){instHide=true;try{localStorage.setItem('bosane-inst-hide','1')}catch(_){}render();return}renderMenu();installApp()}},true);
 const rPwa=render;render=function(){rPwa();
-if(tab==='feed'&&!STANDALONE&&!instHide&&(DEFI||isIOS)){const f=document.getElementById('feed');if(f&&!f.querySelector('.instc'))f.insertAdjacentHTML('afterbegin',`<div class='comp instc uc' style='display:flex;align-items:center;gap:12px'><img src='icon-192.png' width='44' height='44' alt='' style='border-radius:10px'><div style='flex:1;min-width:0'><b>${T3('Installer BoSane','Enstale BoSane','Install BoSane')}</b><div class='path'>${T3('Ouvrez la famille d’un seul geste, depuis votre écran d’accueil.','Louvri fanmi an yon sèl kou, sou ekran lakay ou.','Open your family in one tap, from your home screen.')}</div></div><button class='pill' data-inst='go'>${T3('Installer','Enstale','Install')}</button><button class='lk' data-inst='hide' aria-label='${T3('Masquer','Kache','Hide')}'>✕</button></div>`)}};
+if(false){const f=document.getElementById('feed');if(f&&!f.querySelector('.instc'))f.insertAdjacentHTML('afterbegin',`<div class='comp instc uc' style='display:flex;align-items:center;gap:12px'><img src='icon-192.png' width='44' height='44' alt='' style='border-radius:10px'><div style='flex:1;min-width:0'><b>${T3('Installer BoSane','Enstale BoSane','Install BoSane')}</b><div class='path'>${T3('Ouvrez la famille d’un seul geste, depuis votre écran d’accueil.','Louvri fanmi an yon sèl kou, sou ekran lakay ou.','Open your family in one tap, from your home screen.')}</div></div><button class='pill' data-inst='go'>${T3('Installer','Enstale','Install')}</button><button class='lk' data-inst='hide' aria-label='${T3('Masquer','Kache','Hide')}'>✕</button></div>`)}};
 
 
 // ===== Animation d'ouverture =====
@@ -1803,6 +1803,34 @@ document.addEventListener('click',e=>{if(IVT&&e.target.id==='invdlg'){IVT=null;d
 
 // garde-fou : lien de parenté avec une personne inconnue
 const rel0=rel;rel=function(m,x){if(!by[x]||(m!=='admin'&&!by[m]))return{t:'',c:'al',d:''};return rel0(m,x)};
+
+// ===== Barre d'installation obligatoire (disparaît une fois installé) =====
+document.head.insertAdjacentHTML('beforeend',`<style>
+#ibar{position:fixed;left:0;right:0;bottom:0;z-index:250;background:var(--card);border-top:1px solid var(--line);box-shadow:0 -6px 24px rgba(0,0,0,.14);padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:12px;animation:ibUp .45s ease-out both}
+#ibar img{width:46px;height:46px;border-radius:11px;flex:none}
+#ibar .t{flex:1;min-width:0;font-size:.9rem;line-height:1.3}
+#ibar .t b{display:block;font-size:1rem}
+#ibar .pill{flex:none;padding:11px 18px;font-size:1rem;animation:ibPulse 2.2s ease-in-out 1s infinite}
+body.hasibar{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+@keyframes ibUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ibPulse{50%{transform:scale(1.06)}}
+@media (prefers-reduced-motion:reduce){#ibar,#ibar .pill{animation:none}}
+</style>`);
+const wasInstalled=()=>{try{return localStorage.getItem('bosane-installed')==='1'}catch(e){return false}};
+const inApp=/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|; wv\)/i.test(navigator.userAgent);
+function instBar(){let b=document.getElementById('ibar');
+const show=!STANDALONE&&!wasInstalled()&&/^https?:/.test(location.protocol);
+document.body.classList.toggle('hasibar',show);
+if(!show){if(b)b.remove();return}
+const msg=inApp?T3('Ouvrez ce lien dans Chrome (menu ⋮ → « Ouvrir dans le navigateur ») pour installer BoSane.','Louvri lyen sa a nan Chrome (meni ⋮ → « Louvri nan navigatè ») pou enstale BoSane.','Open this link in Chrome (menu ⋮ → “Open in browser”) to install BoSane.')
+ :T3('Installez l’application pour retrouver la famille d’un seul geste.','Enstale aplikasyon an pou jwenn fanmi an yon sèl kou.','Install the app to reach your family in one tap.');
+const h=`<img src='icon-192.png' alt=''><div class='t'><b>${T3('Installez BoSane','Enstale BoSane','Install BoSane')}</b>${msg}</div>${inApp?'':`<button class='pill' data-inst='go'>${T3('Installer','Enstale','Install')}</button>`}`;
+if(!b){document.body.insertAdjacentHTML('beforeend',`<div id='ibar' role='region' aria-label='${T3('Installer l’application','Enstale aplikasyon an','Install the app')}'>${h}</div>`)}else b.innerHTML=h}
+matchMedia('(display-mode: standalone)').addEventListener&&matchMedia('(display-mode: standalone)').addEventListener('change',e=>{if(e.matches){try{localStorage.setItem('bosane-installed','1')}catch(_){}}instBar()});
+if(STANDALONE){try{localStorage.setItem('bosane-installed','1')}catch(_){}}
+const rIb=render;render=function(){rIb();instBar()};
+setTimeout(instBar,1900);
+
 BOOT().finally(hideSplash);setTimeout(hideSplash,7000);
 const wr0=document.querySelector('.wrap');if(wr0)wr0.scrollLeft=(wr0.scrollWidth-wr0.clientWidth)/2;
 </script>

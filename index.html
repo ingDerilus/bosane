@@ -1386,6 +1386,7 @@ function authScreen(k,err,cancel){const a=document.getElementById('auth'),b=docu
 const E=err?`<div class='aerr'>${esc(err)}</div>`:'';
 clearTimeout(window.WAITT);
 if(k==='wait'){b.innerHTML=`<div class='path'>${T3('Connexion…','Koneksyon…','Connecting…')}</div>`;window.WAITT=setTimeout(()=>{const a=document.getElementById('auth');if(a&&!a.classList.contains('hide')&&document.getElementById('abody').textContent.match(/Connexion…|Koneksyon…|Connecting…/))authScreen('stuck')},15000)}
+else if(k==='banned')b.innerHTML=`<div style='font-size:1.8rem'>🚫</div><div><b>${T3('Votre accès a été suspendu','Aksè ou sispann','Your access has been suspended')}</b></div><div class='path' style='margin:8px 0'>${T3('Contactez l’administrateur de BoSane pour en savoir plus.','Kontakte administratè BoSane pou plis enfòmasyon.','Contact the BoSane administrator for more information.')}</div><button class='lk' id='alogout'>${T3('Se déconnecter','Dekonekte','Sign out')}</button>`;
 else if(k==='stuck')b.innerHTML=`<div><b>${T3('La connexion prend du temps','Koneksyon an ap pran tan','Connection is taking a while')}</b></div><div class='path' style='margin:8px 0'>${T3('Vérifiez votre internet, puis réessayez.','Verifye entènèt ou, epi eseye ankò.','Check your internet, then try again.')}</div>${LASTERR?`<div class='path' style='font-size:.75rem;word-break:break-word;opacity:.8'>${esc(LASTERR.slice(0,160))}</div>`:''}<button class='pill' id='aretry'>${T3('Réessayer','Eseye ankò','Try again')}</button><button class='lk' id='alogout'>${T3('Se déconnecter','Dekonekte','Sign out')}</button>`;
 else if(k==='fail')b.innerHTML=`<div>${T3('Impossible de charger BoSane. Vérifiez votre connexion internet, puis rechargez la page.','Nou pa ka chaje BoSane. Verifye entènèt ou, epi rechaje paj la.','Cannot load BoSane. Check your internet connection, then reload the page.')}</div>`;
 else if(k==='email')b.innerHTML=`<div><b>${T3('Connexion','Koneksyon','Sign in')}</b></div><div class='path'>${T3('Entrez votre adresse e-mail : vous recevrez un lien de connexion.','Antre adrès imèl ou : w ap resevwa yon lyen pou konekte.','Enter your email address: you will receive a sign-in link.')}</div><input id='aemail' type='email' autocomplete='email' placeholder='nom@exemple.com' value='${esc(AEMAIL)}'><button class='pill' id='asendmail'>${T3('Recevoir mon lien','Resevwa lyen mwen','Get my link')}</button>${E}`;
@@ -1414,7 +1415,7 @@ async function afterLogin0(user){UID=user.id;if(/access_token|error_description/
 const [a,b]=await Promise.all([SB.rpc('my_profile'),SB.rpc('is_admin')]);
 if(a.error)return authScreen('email',a.error.message);
 MYDB=a.data||null;ISADM=!!b.data;
-if(!MYDB&&!ISADM)return authScreen('claim');
+if(!MYDB&&!ISADM){const st=await SB.rpc('my_status');return authScreen(st.data==='banned'?'banned':'claim')}
 FIRST=true;await reload(true);
 if(!READY)return authScreen('email',T3('Chargement impossible. Réessayez.','Chajman pa mache. Eseye ankò.','Loading failed. Try again.'));
 document.getElementById('auth').classList.add('hide');live()}
@@ -1449,7 +1450,7 @@ if(roots.length){const r0=roots[0];A2L[r0.id]='jo';L2A.jo=r0.id;
 const us=un.filter(u=>u.a_id===r0.id||u.b_id===r0.id).sort((a,b)=>(a.status==='current'?0:1)-(b.status==='current'?0:1));
 const o=us.map(u=>u.a_id===r0.id?u.b_id:u.a_id).find(x=>!parOf[x]);if(o){A2L[o]='ma';L2A.ma=o}}
 P.length=0;Object.keys(by).forEach(k=>delete by[k]);[BIO,PH,BD,PL,DD,MEMT,MEMV].forEach(o=>Object.keys(o).forEach(k=>delete o[k]));
-pr.forEach(x=>{const id=L(x.id),p={id,n:esc(x.first_name),g:x.gender,dc:x.deceased?1:0};
+pr.forEach(x=>{const id=L(x.id),p={id,n:esc(x.first_name),g:x.gender,dc:x.deceased?1:0,bn:x.banned?1:0,acc:x.user_id?1:0};
 const pa=(parOf[x.id]||[]).map(L);if(pa.length)p.par=pa;
 const mine=un.filter(u=>u.a_id===x.id||u.b_id===x.id),oth=u=>L(u.a_id===x.id?u.b_id:u.a_id);
 const cur=mine.find(u=>u.status==='current');if(cur)p.sp=oth(cur);const ex=mine.filter(u=>u.status==='ex').map(oth);if(ex.length)p.ex=ex;
@@ -1478,7 +1479,7 @@ STORIES.length=0;st.filter(r=>!pendDel.has('s'+r.id)).forEach(r=>STORIES.push({i
 Object.keys(SR).forEach(k=>delete SR[k]);srx.forEach(x=>{(SR['d'+x.story_id]=SR['d'+x.story_id]||{})[L(x.member_id)]=x.emoji});
 const ML=meL();sv.forEach(x=>{if(L(x.member_id)===ML)SEEN.add('d'+x.story_id)});
 Q=inv.filter(r=>r.status==='pending').map(r=>({id:'i'+r.id,dbid:r.id,n:esc(r.first_name),g:r.gender,type:r.relation,anchor:L(r.anchor_id),via:L(r.via_id),op:L(r.other_parent_id)})).filter(q=>by[q.anchor]&&(q.type!=='cousin'||by[q.via]));
-CODES=inv.filter(r=>r.status==='approved'&&r.code).map(r=>({n:esc(r.first_name),code:r.code,m:L(r.member_id)}));
+CODES=inv.filter(r=>r.status==='approved'&&r.code).map(r=>({n:esc(r.first_name),code:r.code,m:L(r.member_id),by:r.created_by,an:L(r.anchor_id)}));
 LOG.length=0;lg.forEach(r=>{const a=esc(r.action);LOG.push({dbid:r.id,t:Date.parse(r.created_at),x:[a,a,a]})});
 // qui suis-je ?
 if(!(me==='admin'&&ISADM))me=ML||'admin';
@@ -1584,7 +1585,7 @@ const w=document.getElementById('who'),ML=meL();if(w){w.innerHTML=(ML&&by[ML]?`<
 // arbre déjà commencé : plus de formulaire « premier couple »
 const rb=document.getElementById('rbtn');if(rb&&P.length){const c=rb.closest('.card');if(c)c.remove()}
 // codes à transmettre
-const CODES2=CODES.filter(c=>!(by[c.m]&&by[c.m].dc));if(tab==='tree'&&CODES2.length){document.getElementById('pend').insertAdjacentHTML('beforeend',`<div class='card codes uc'><b>🔑 ${T3('Codes d’accès à transmettre','Kòd aksè pou bay','Access codes to pass on')}</b><div class='path'>${T3('Touchez « Inviter » : un message chaleureux à son nom s’ouvre dans WhatsApp, avec son lien et son code.','Peze « Envite » : yon bèl mesaj ak non li ap louvri nan WhatsApp, ak lyen li ak kòd li.','Tap “Invite”: a warm message with their name opens in WhatsApp, with their link and code.')}</div>${CODES2.map(c=>`<div class='req row' style='align-items:center;justify-content:space-between'><span><b>${c.n}</b> <code>${c.code}</code></span><span class='row' style='gap:6px'><button class='pill wabtn' data-winv='${c.code}'>💌 ${T3('Inviter','Envite','Invite')}</button><button class='ghost' data-cpc='${c.code}'>${T3('Copier','Kopye','Copy')}</button></span></div>`).join('')}</div>`)}
+const CODES2=CODES.filter(c=>!(by[c.m]&&by[c.m].dc)&&(me==='admin'||c.by===UID||(c.an&&c.an===meL())));if(tab==='tree'&&CODES2.length){document.getElementById('pend').insertAdjacentHTML('beforeend',`<div class='card codes uc'><b>🔑 ${T3('Codes d’accès à transmettre','Kòd aksè pou bay','Access codes to pass on')}</b><div class='path'>${T3('Touchez « Inviter » : un message chaleureux à son nom s’ouvre dans WhatsApp, avec son lien et son code.','Peze « Envite » : yon bèl mesaj ak non li ap louvri nan WhatsApp, ak lyen li ak kòd li.','Tap “Invite”: a warm message with their name opens in WhatsApp, with their link and code.')}</div>${CODES2.map(c=>`<div class='req row' style='align-items:center;justify-content:space-between'><span><b>${c.n}</b> <code>${c.code}</code></span><span class='row' style='gap:6px'><button class='pill wabtn' data-winv='${c.code}'>💌 ${T3('Inviter','Envite','Invite')}</button><button class='ghost' data-cpc='${c.code}'>${T3('Copier','Kopye','Copy')}</button></span></div>`).join('')}</div>`)}
 // date de naissance modifiable dans « À propos »
 if(tab==='me'&&ptab==='about'&&by[me]&&(!pv||pv===me)){const d=document.getElementById('me');d.insertAdjacentHTML('beforeend',`<div class='comp'><b>🎂 ${T3('Ma date de naissance','Dat nesans mwen','My birthday')}</b><div class='row' style='margin-top:8px;align-items:center'><input id='bdi' type='date' class='efld' style='flex:1;margin:0' value='${BD[me]?isoD(BD[me]):''}'><button class='pill' data-bdsave='1'>${T3('Enregistrer','Anrejistre','Save')}</button></div><div class='path'>${T3('Elle sert aux annonces d’anniversaire.','Li sèvi pou anons anivèsè yo.','Used for birthday announcements.')}</div></div>`)}
 if(READY&&!INTERNAL){DIRTY++;kickSync(350)}};
@@ -1852,7 +1853,7 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 #odlg textarea{width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--txt);margin:8px 0}
 </style>`);
 const mod=T3('modifié','modifye','edited');
-const OREF={};let oseq=0;
+const OREF={};let oseq=0;var MMID=null;
 const reg=o=>{const k='o'+(++oseq);OREF[k]=o;return k};
 // commentaires : bouton ⋯ pour l'auteur et l'administrateur
 const cH2=cHtml;cHtml=function(p,c,ci,rep){let x=cH2(p,c,ci,rep);if(!SB||!c.dbid)return x;
@@ -1889,6 +1890,7 @@ if(o.t==='s'&&svs){clearTimeout(stt)}
 odlg(h)}
 const rmFiles=ps=>{ps=ps.filter(Boolean);if(ps.length)SB.storage.from('media').remove(ps).catch(()=>{})};
 async function oAct(a){const o=OCUR,T=t=>SB.from(t);let r=null;
+if(a==='x'||!o){odlg(null);OCUR=null;MMID=null;if(o&&o.t==='s'&&svs)renderStory();return}
 const obj=o[o.t],tbl={p:'posts',c:'comments',m:'messages',s:'stories'}[o.t],id=obj.dbid;
 if(a==='x'){odlg(null);OCUR=null;if(o.t==='s'&&svs)renderStory();return}
 if(a==='edit'){odlg(`<b style='display:block;padding:8px 6px'>✏️ ${T3('Modifier','Modifye','Edit')}</b><textarea id='oet' rows='4' maxlength='${o.t==='p'?5000:o.t==='m'?4000:2000}'>${obj.t}</textarea><div class='row' style='justify-content:flex-end;gap:8px'><button class='pill gh' data-oa='x'>${T3('Annuler','Anile','Cancel')}</button><button class='pill' data-oa='save'>${T3('Enregistrer','Anrejistre','Save')}</button></div>`);const t=document.getElementById('oet');t.focus();t.setSelectionRange(t.value.length,t.value.length);return}
@@ -1907,7 +1909,34 @@ if(r&&r.error)return toast(T3('Action impossible : ','Aksyon an pa mache : ','Ac
 odlg(null);OCUR=null;kickSync(0,true)}
 document.addEventListener('click',e=>{if(!SB)return;const b=e.target.closest('[data-om],[data-oa]');
 if(!b){if(e.target.id==='odlg'){odlg(null);if(OCUR&&OCUR.t==='s'&&svs)renderStory();OCUR=null}return}
-e.stopPropagation();e.preventDefault();if(b.dataset.om){const o=OREF[b.dataset.om];if(o)openOpts(o)}else oAct(b.dataset.oa)},true);
+if(b.dataset.oa&&b.dataset.oa.startsWith('mm-'))return;e.stopPropagation();e.preventDefault();if(b.dataset.om){const o=OREF[b.dataset.om];if(o)openOpts(o)}else oAct(b.dataset.oa)},true);
+
+
+// ===== Gestion des membres (administrateur) =====
+document.head.insertAdjacentHTML('beforeend',`<style>.bdg{display:inline-block;font-size:.72rem;padding:1px 7px;border-radius:10px;margin-left:6px;vertical-align:middle;background:color-mix(in srgb,var(--txt) 9%,transparent);color:var(--mut)}.bdg.ban{background:#fde7e7;color:#c0392b}.p.bn{opacity:.55}</style>`);
+const rMM=render;render=function(){rMM();if(!SB||!READY||!ISADM)return;
+document.querySelectorAll('#adm .arow[data-goto]').forEach(r=>{const x=by[r.dataset.goto];if(!x||r.querySelector('[data-mm]'))return;
+ const b=r.querySelector('b');if(b)b.insertAdjacentHTML('afterend',x.bn?`<span class='bdg ban'>🚫 ${T3('suspendu','sispann','suspended')}</span>`:x.dc?'':x.acc?'':`<span class='bdg'>${T3('pas encore inscrit','poko enskri','not signed up yet')}</span>`);
+ if(x.id!==meL())r.insertAdjacentHTML('beforeend',`<button class='ib' data-mm='${x.id}' aria-label='${T3('Gérer ce membre','Jere manm sa a','Manage this member')}' style='font-size:1.3rem'>⋯</button>`)});
+if(tab==='tree')P.forEach(x=>{if(x.bn){const e=document.querySelector(`.p[data-id='${x.id}']`);if(e){e.classList.add('bn');const s=e.querySelector('small');if(s&&!s.textContent.includes('🚫'))s.textContent='🚫 '+s.textContent}}})};
+function mmOpts(id){const x=by[id];if(!x)return;MMID=id;const kids=P.filter(c=>c.par&&c.par.includes(id)).length;
+odlg(`<b style='display:block;padding:8px 14px'>${x.n}</b>
+${x.dc?'':x.bn?item('mm-unban','✅',T3('Réactiver son accès','Reaktive aksè li','Restore access')):x.acc?item('mm-ban','🚫',T3('Suspendre son accès','Sispann aksè li','Suspend access')):''}
+${x.dc?'':item('mm-reset','🔑',T3('Réinitialiser l’accès (nouveau code)','Rekòmanse aksè a (nouvo kòd)','Reset access (new code)'))}
+${kids?`<div class='path' style='padding:8px 14px'>🌳 ${T3(`Pour retirer ${x.n} de l’arbre, retirez d’abord ses ${kids} enfant(s).`,`Pou retire ${x.n} nan pyebwa a, retire ${kids} pitit li yo anvan.`,`To remove ${x.n} from the tree, first remove their ${kids} child(ren).`)}</div>`:item('mm-del','🗑',T3('Retirer de l’arbre','Retire nan pyebwa a','Remove from the tree'),1)}
+${item('x','✕',T3('Annuler','Anile','Cancel'))}`)}
+async function mmAct(a){const x=by[MMID],id=D(MMID);let r=null;
+if(a==='mm-ban'){if(!confirm(T3(`Suspendre l’accès de ${x.n} ? Il reste dans l’arbre mais ne pourra plus rien voir ni publier.`,`Sispann aksè ${x.n} ? Li rete nan pyebwa a men li p ap ka wè ni pibliye anyen.`,`Suspend ${x.n}’s access? They stay in the tree but can no longer see or post anything.`)))return;
+ r=await SB.rpc('set_banned',{p_id:id,p_banned:true});if(!r.error)toast(T3(`Accès de ${x.n} suspendu`,`Aksè ${x.n} sispann`,`${x.n}’s access suspended`))}
+if(a==='mm-unban'){r=await SB.rpc('set_banned',{p_id:id,p_banned:false});if(!r.error)toast(T3(`Accès de ${x.n} réactivé`,`Aksè ${x.n} reaktive`,`${x.n}’s access restored`))}
+if(a==='mm-reset'){if(!confirm(T3(`Créer un nouveau code pour ${x.n} ? Son ancien compte sera détaché ; il devra se reconnecter avec ce nouveau code.`,`Kreye yon nouvo kòd pou ${x.n} ? Ansyen kont li ap detache ; l ap oblije rekonekte ak nouvo kòd la.`,`Create a new code for ${x.n}? Their old account will be detached; they must sign in again with the new code.`)))return;
+ r=await SB.rpc('reset_access',{p_id:id});if(!r.error)toast(T3(`Nouveau code pour ${x.n} : ${r.data} — il est dans l’onglet Arbre.`,`Nouvo kòd pou ${x.n} : ${r.data} — li nan Pyebwa a.`,`New code for ${x.n}: ${r.data} — it’s in the Tree tab.`))}
+if(a==='mm-del'){if(!confirm(T3(`Retirer ${x.n} de l’arbre ? Sa fiche, ses publications, commentaires et messages seront supprimés définitivement.`,`Retire ${x.n} nan pyebwa a ? Fich li, piblikasyon, kòmantè ak mesaj li yo ap efase nèt.`,`Remove ${x.n} from the tree? Their profile, posts, comments and messages will be permanently deleted.`)))return;
+ r=await SB.rpc('remove_member',{p_id:id});if(!r.error){if(pv===MMID)pv=null;toast(T3(`${x.n} a été retiré de l’arbre`,`${x.n} retire nan pyebwa a`,`${x.n} was removed from the tree`))}}
+if(r&&r.error)return toast(r.error.message);
+odlg(null);MMID=null;kickSync(0,true)}
+document.addEventListener('click',e=>{if(!SB)return;const b=e.target.closest('[data-mm],[data-oa^="mm-"]');if(!b)return;e.stopPropagation();e.preventDefault();
+if(b.dataset.mm)mmOpts(b.dataset.mm);else mmAct(b.dataset.oa)},true);
 
 BOOT().finally(hideSplash);setTimeout(hideSplash,7000);
 const wr0=document.querySelector('.wrap');if(wr0)wr0.scrollLeft=(wr0.scrollWidth-wr0.clientWidth)/2;

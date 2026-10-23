@@ -1966,6 +1966,54 @@ d.innerHTML=`<div class='comp' style='text-align:center'><img src='${EMB}' width
 ${n?`<div class='comp uc' style='text-align:center'><div style='font-size:2rem;font-weight:700;color:var(--bl)'>${n}</div><div class='path'>${T3('membres de la famille déjà réunis dans l’arbre','manm fanmi ki deja reyini nan pyebwa a','family members already gathered in the tree')}</div></div>`:''}
 <div class='comp path uc'>${A.pv}</div>`};
 
+
+// ===== Notifications sur le téléphone =====
+const VAPID_PUB='BLYMZNppYAB2KYW14xRN6gAQl2bkgFWYTFTdtdcSVt1ocWefSyNEA0q36EhIjfBetL3nXr5S5UBilQ-8AoEG6gM';
+const PUSH_OK=('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window)&&/^https?:/.test(location.protocol);
+let PUSHON=false,pushHide=false;try{pushHide=sessionStorage.getItem('bosane-push-later')==='1'}catch(e){}
+const ub64=s=>{s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Uint8Array.from(atob(s),c=>c.charCodeAt(0))};
+async function pushSub(){if(!PUSH_OK)return null;const r=await navigator.serviceWorker.ready;return r.pushManager.getSubscription()}
+async function pushSave(sub){const j=sub.toJSON();try{await SB.from('push_subs').upsert({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,lang},{onConflict:'endpoint'})}catch(e){}}
+async function pushEnable(){
+ if(!PUSH_OK){toast(isIOS&&!STANDALONE?T3('Sur iPhone, installez d’abord BoSane sur l’écran d’accueil (Partager ⬆️ → Sur l’écran d’accueil).','Sou iPhone, enstale BoSane sou ekran lakay ou anvan (Pataje ⬆️ → Sou ekran lakay).','On iPhone, first add BoSane to your home screen (Share ⬆️ → Add to Home Screen).'):T3('Ce navigateur ne gère pas les notifications.','Navigatè sa a pa sipòte notifikasyon.','This browser does not support notifications.'));return}
+ const p=await Notification.requestPermission();
+ if(p!=='granted'){toast(T3('Notifications refusées. Vous pourrez les autoriser plus tard dans les réglages du téléphone.','Notifikasyon refize. Ou ka otorize yo pita nan paramèt telefòn nan.','Notifications blocked. You can allow them later in your phone settings.'));render();return}
+ try{const r=await navigator.serviceWorker.ready;let s=await r.pushManager.getSubscription();if(!s)s=await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:ub64(VAPID_PUB)});
+  await pushSave(s);PUSHON=true;toast(T3('🔔 Notifications activées','🔔 Notifikasyon aktive','🔔 Notifications on'))}
+ catch(e){toast(T3('Activation impossible : ','Aktivasyon pa mache : ','Could not enable: ')+(e.message||e))}render()}
+async function pushDisable(){try{const s=await pushSub();if(s){await SB.from('push_subs').delete().eq('endpoint',s.endpoint);await s.unsubscribe()}}catch(e){}PUSHON=false;toast(T3('🔕 Notifications désactivées','🔕 Notifikasyon dezaktive','🔕 Notifications off'));render()}
+async function pushSync(){if(!PUSH_OK||Notification.permission!=='granted')return;try{const s=await pushSub();if(s){PUSHON=true;await pushSave(s)}}catch(e){}if(READY)render()}
+
+// ouverture au bon endroit depuis une notification
+let OPEN0=null;(function(){const o=new URLSearchParams(location.search).get('open');if(o){OPEN0=o;history.replaceState(null,'',location.pathname+location.hash)}})();
+function openTarget(o){if(!o||!READY)return;const [k,v]=o.split(':');
+ if(k==='msg'&&by[L(v)]){tab='inbox';sub='m';mv=L(v)}
+ else if(k==='post'&&posts.find(p=>p.id==v)){tab='feed';mode='time';cs=+v}
+ else if(k==='profile'&&by[L(v)]){tab='me';pv=L(v);ptab='posts'}
+ else if(k==='tree'){tab='tree'}
+ render();window.scrollTo(0,0)}
+if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.open)kickSync(0,true),setTimeout(()=>openTarget(e.data.open),900)});
+
+// la cloche retient ce qui a déjà été lu
+const SEENK=()=>'bosane-seen-'+(UID||'');
+function seenLoad(){try{JSON.parse(localStorage.getItem(SEENK())||'[]').forEach(k=>seenN.add(k))}catch(e){}}
+let seenLoaded=false,seenLast=0;
+
+const rPush=render;render=function(){rPush();if(!SB||!READY)return;
+ if(!seenLoaded){seenLoaded=true;seenLoad();pushSync();if(OPEN0){const o=OPEN0;OPEN0=null;setTimeout(()=>openTarget(o),50)}}
+ if(seenN.size!==seenLast){seenLast=seenN.size;try{localStorage.setItem(SEENK(),JSON.stringify([...seenN].slice(-800)))}catch(e){}}
+ // carte d'activation dans le fil
+ const showCard=tab==='feed'&&!pushHide&&!PUSHON&&(PUSH_OK?Notification.permission==='default':(isIOS&&!STANDALONE));
+ const f=document.getElementById('feed');
+ if(showCard&&f&&!f.querySelector('.pushc'))f.insertAdjacentHTML('afterbegin',`<div class='comp pushc uc' style='display:flex;align-items:center;gap:12px'><div style='font-size:1.8rem'>🔔</div><div style='flex:1;min-width:0'><b>${T3('Ne manquez rien de la famille','Pa rate anyen nan fanmi an','Don’t miss family news')}</b><div class='path'>${PUSH_OK?T3('Recevez une notification pour les messages, les commentaires, les anniversaires…','Resevwa notifikasyon pou mesaj, kòmantè, anivèsè…','Get notified of messages, comments, birthdays…'):T3('Sur iPhone : installez BoSane sur l’écran d’accueil pour recevoir les notifications.','Sou iPhone : enstale BoSane sou ekran lakay ou pou resevwa notifikasyon.','On iPhone: add BoSane to your home screen to get notifications.')}</div></div>${PUSH_OK?`<button class='pill' data-push='on'>${T3('Activer','Aktive','Turn on')}</button>`:''}<button class='lk' data-push='later' aria-label='${T3('Plus tard','Pita','Later')}'>✕</button></div>`)};
+
+// menu ☰ : réglage
+const rmPush=renderMenu;renderMenu=function(){rmPush();if(mnuS!=='menu'||!SB||!READY)return;const dy=document.getElementById('mdyn');if(!dy||dy.querySelector('[data-push]'))return;
+ const on=PUSHON&&PUSH_OK&&Notification.permission==='granted';
+ dy.insertAdjacentHTML('afterbegin',`<button class='mi2' data-push='${on?'off':'on'}'><span style='font-size:1.3rem;width:22px;text-align:center'>${on?'🔔':'🔕'}</span><span>${on?T3('Notifications : activées','Notifikasyon : aktive','Notifications: on'):T3('Activer les notifications','Aktive notifikasyon','Turn on notifications')}</span></button>`)};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-push]');if(!b||!SB)return;e.stopPropagation();e.preventDefault();const a=b.dataset.push;mnuS=null;renderMenu();
+ if(a==='on')pushEnable();else if(a==='off')pushDisable();else if(a==='later'){pushHide=true;try{sessionStorage.setItem('bosane-push-later','1')}catch(_){}render()}},true);
+
 BOOT().finally(hideSplash);setTimeout(hideSplash,7000);
 const wr0=document.querySelector('.wrap');if(wr0)wr0.scrollLeft=(wr0.scrollWidth-wr0.clientWidth)/2;
 </script>

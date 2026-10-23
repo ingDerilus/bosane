@@ -1459,7 +1459,7 @@ const blood0=i=>by[i]&&(by[i].par||i==='jo')?1:0;
 P.forEach(p=>{if(p.par&&p.par.length>1)p.par.sort((a,b)=>blood0(b)-blood0(a))});
 const now=Date.now(),hh=t=>Math.max(0,Math.floor((now-Date.parse(t))/HR)),P2=new Map();
 posts.length=0;
-po.filter(r=>!pendDel.has('p'+r.id)).forEach(r=>{const p={id:r.id,dbid:r.id,a:r.author_id?L(r.author_id):'admin',h:hh(r.created_at),ts:Date.parse(r.created_at),t:esc(r.body||''),img:U(r.image_path),au:U(r.audio_path),mem:L(r.memorial_of),l:[],r:{},c:[],cl:r.closed?1:0,rb:[],o:0,rv:{}};
+po.filter(r=>!pendDel.has('p'+r.id)).forEach(r=>{const p={id:r.id,dbid:r.id,a:r.author_id?L(r.author_id):'admin',h:hh(r.created_at),ts:Date.parse(r.created_at),t:esc(r.body||''),img:U(r.image_path),au:U(r.audio_path),ip:r.image_path,ap:r.audio_path,ed:!!r.edited_at,mem:L(r.memorial_of),l:[],r:{},c:[],cl:r.closed?1:0,rb:[],o:0,rv:{}};
 if(r.kind==='welcome')p.sys={k:'welcome',id:L(r.subject_id)};
 if(r.kind==='birthday')p.sys={k:'birthday',id:L(r.subject_id)};
 if(r.kind==='memorial')p.sys={k:'memorial',id:L(r.subject_id)};
@@ -1468,13 +1468,13 @@ if(!p.mem)delete p.mem;P2.set(r.id,p);posts.push(p)});
 prx.forEach(x=>{const p=P2.get(x.post_id);if(p)p.r[L(x.member_id)]=x.emoji});
 rep.forEach(x=>{const p=P2.get(x.post_id);if(p)p.rb.push(L(x.reporter_id))});
 rsv.forEach(x=>{const p=P2.get(x.post_id);if(p)p.rv[L(x.member_id)]=x.answer});
-const C=new Map();co.forEach(r=>C.set(r.id,{dbid:r.id,pid:r.post_id,par:r.parent_id,a:L(r.author_id),t:esc(r.body||''),au:U(r.audio_path),x:r.hidden?1:0,r:{},re:[]}));
+const C=new Map();co.forEach(r=>C.set(r.id,{dbid:r.id,pid:r.post_id,par:r.parent_id,a:L(r.author_id),t:esc(r.body||''),au:U(r.audio_path),ap:r.audio_path,ed:!!r.edited_at,x:r.hidden?1:0,r:{},re:[]}));
 crx.forEach(x=>{const c=C.get(x.comment_id);if(c)c.r[L(x.member_id)]=x.emoji});
 const top=c=>{let k=c;while(k.par&&C.get(k.par))k=C.get(k.par);return k};
 C.forEach(c=>{const p=P2.get(c.pid);if(!p)return;if(!c.par||!C.get(c.par))p.c.push(c);else top(c).re.push(c)});
 posts.forEach(p=>{p.l=Object.keys(p.r)});
-MSG.length=0;ms.forEach(r=>MSG.push({i:r.id,dbid:r.id,f:L(r.sender_id),to:L(r.recipient_id),h:hh(r.created_at),t:esc(r.body||''),au:U(r.audio_path),rd:r.read_at?1:0,q:r.reply_to,ol:'fr'}));
-STORIES.length=0;st.filter(r=>!pendDel.has('s'+r.id)).forEach(r=>STORIES.push({id:'d'+r.id,dbid:r.id,a:L(r.author_id),ts:Date.parse(r.created_at),t:esc(r.body||''),bg:r.bg||0,img:U(r.image_path)}));
+MSG.length=0;ms.forEach(r=>MSG.push({i:r.id,dbid:r.id,f:L(r.sender_id),to:L(r.recipient_id),h:hh(r.created_at),t:esc(r.body||''),au:U(r.audio_path),ap:r.audio_path,ed:!!r.edited_at,rd:r.read_at?1:0,q:r.reply_to,ol:'fr'}));
+STORIES.length=0;st.filter(r=>!pendDel.has('s'+r.id)).forEach(r=>STORIES.push({id:'d'+r.id,dbid:r.id,a:L(r.author_id),ts:Date.parse(r.created_at),t:esc(r.body||''),bg:r.bg||0,img:U(r.image_path),ip:r.image_path}));
 Object.keys(SR).forEach(k=>delete SR[k]);srx.forEach(x=>{(SR['d'+x.story_id]=SR['d'+x.story_id]||{})[L(x.member_id)]=x.emoji});
 const ML=meL();sv.forEach(x=>{if(L(x.member_id)===ML)SEEN.add('d'+x.story_id)});
 Q=inv.filter(r=>r.status==='pending').map(r=>({id:'i'+r.id,dbid:r.id,n:esc(r.first_name),g:r.gender,type:r.relation,anchor:L(r.anchor_id),via:L(r.via_id),op:L(r.other_parent_id)})).filter(q=>by[q.anchor]&&(q.type!=='cousin'||by[q.via]));
@@ -1835,6 +1835,79 @@ matchMedia('(display-mode: standalone)').addEventListener&&matchMedia('(display-
 if(STANDALONE){try{localStorage.setItem('bosane-installed','1')}catch(_){}}
 const rIb=render;render=function(){rIb();instBar()};
 setTimeout(instBar,1900);
+
+
+// ===== Modifier / supprimer ses contenus =====
+document.head.insertAdjacentHTML('beforeend',`<style>
+.fp{position:relative}
+.omb{position:absolute;top:8px;right:8px;width:36px;height:36px;border-radius:50%;border:0;background:transparent;color:var(--mut);font-size:1.3rem;line-height:1;cursor:pointer}
+.omb:active{background:color-mix(in srgb,var(--txt) 10%,transparent)}
+.edt{color:var(--mut);font-size:.75rem;font-style:italic;margin-left:4px}
+.mrow .omm{background:none;border:0;color:var(--mut);font-size:1.1rem;padding:2px 6px;cursor:pointer}
+#odlg{position:fixed;inset:0;z-index:170;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+#odlg .box{background:var(--card);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:10px 10px calc(14px + env(safe-area-inset-bottom,0px))}
+#odlg .oi{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:0;background:none;color:var(--txt);font:inherit;font-size:1rem;text-align:left;border-radius:12px}
+#odlg .oi:active{background:color-mix(in srgb,var(--txt) 8%,transparent)}
+#odlg .oi.dg{color:#d93025}
+#odlg textarea{width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--txt);margin:8px 0}
+</style>`);
+const mod=T3('modifié','modifye','edited');
+const OREF={};let oseq=0;
+const reg=o=>{const k='o'+(++oseq);OREF[k]=o;return k};
+// commentaires : bouton ⋯ pour l'auteur et l'administrateur
+const cH2=cHtml;cHtml=function(p,c,ci,rep){let x=cH2(p,c,ci,rep);if(!SB||!c.dbid)return x;
+const own=meL()&&c.a===meL()&&me!=='admin',adm=ISADM&&me==='admin';
+if(c.ed&&!c.x)x=x.replace("<div class='ca'>",`<div class='ca'><span class='edt'>${mod}</span>`);
+if(own||adm){const k=reg({t:'c',c,p});x=x.replace("<div class='ca'>",`<div class='ca'><button class='lk' data-om='${k}' aria-label='${T3('Options','Opsyon','Options')}'>⋯</button>`)}
+return x};
+// publications, messages, stories : ajout après l'affichage
+const rOwn=render;render=function(){rOwn();if(!SB||!READY)return;const ML=meL(),adm=ISADM&&me==='admin';
+document.querySelectorAll('.fp').forEach(el=>{if(el.querySelector('.omb'))return;const p=postOf(el);if(!p||!p.dbid)return;
+ if(p.ed){const sm=el.querySelector('.fh small');if(sm&&!sm.querySelector('.edt'))sm.insertAdjacentHTML('beforeend',`<span class='edt'>· ${mod}</span>`)}
+ const own=ML&&p.a===ML&&me!=='admin'&&!p.sys;if(!(own||adm))return;
+ el.insertAdjacentHTML('beforeend',`<button class='omb' data-om='${reg({t:'p',p})}' aria-label='${T3('Options','Opsyon','Options')}'>⋯</button>`)});
+document.querySelectorAll('[data-mr]').forEach(b=>{const m=MSG.find(x=>x.i==b.dataset.mr);if(!m||!m.dbid)return;const row=b.closest('.mrow');if(!row||row.querySelector('.omm'))return;
+ if(m.ed){const mb=row.querySelector('.mb');if(mb)mb.insertAdjacentHTML('beforeend',`<span class='edt'>${mod}</span>`)}
+ if(ML&&m.f===ML&&me!=='admin')b.insertAdjacentHTML('beforebegin',`<button class='omm' data-om='${reg({t:'m',m})}' aria-label='${T3('Options','Opsyon','Options')}'>⋯</button>`)});
+const sv=document.getElementById('stv');if(sv&&svs){const s=svs.q[svs.i],hd=sv.querySelector('.shd');
+ if(s&&s.dbid&&hd&&!hd.querySelector('[data-om]')&&((ML&&s.a===ML&&me!=='admin')||adm))hd.querySelector('[data-sx]').insertAdjacentHTML('beforebegin',`<button class='ib wh' data-om='${reg({t:'s',s})}' aria-label='${T3('Supprimer la story','Efase istwa a','Delete story')}'>🗑</button>`)}};
+// fenêtre d'options
+function odlg(h){let d=document.getElementById('odlg');if(!h){if(d)d.remove();return}if(!d){document.body.insertAdjacentHTML('beforeend',`<div id='odlg'><div class='box'></div></div>`);d=document.getElementById('odlg')}d.querySelector('.box').innerHTML=h}
+let OCUR=null;
+const item=(k,ic,l,dg)=>`<button class='oi${dg?' dg':''}' data-oa='${k}'><span style='font-size:1.2rem'>${ic}</span>${l}</button>`;
+function openOpts(o){OCUR=o;const own=o.t==='p'?o.p.a===meL():o.t==='c'?o.c.a===meL():o.t==='m'?true:o.s.a===meL();const mine=own&&me!=='admin';let h='';
+const txt=o.t==='p'?o.p.t:o.t==='c'?o.c.t:o.t==='m'?o.m.t:'';const img=o.t==='p'&&o.p.img,au=o.t==='p'?o.p.au:o.t==='c'?o.c.au:o.t==='m'?o.m.au:null;
+if(mine&&o.t!=='s'&&txt)h+=item('edit','✏️',T3('Modifier le texte','Modifye tèks la','Edit text'));
+if(mine&&img&&(txt||au))h+=item('noimg','🖼',T3('Retirer la photo','Retire foto a','Remove photo'));
+if(mine&&au&&(txt||img))h+=item('noau','🎤',T3('Retirer le message vocal','Retire mesaj vokal la','Remove voice message'));
+if(!mine&&o.t==='c'&&!o.c.x)h+=item('hide','🙈',T3('Masquer ce commentaire','Kache kòmantè sa a','Hide this comment'));
+if(!mine&&o.t==='c'&&o.c.x)h+=item('unhide','👁',T3('Rétablir ce commentaire','Retabli kòmantè sa a','Restore this comment'));
+const lbl={p:T3('Supprimer la publication','Efase piblikasyon an','Delete post'),c:T3('Supprimer le commentaire','Efase kòmantè a','Delete comment'),m:T3('Supprimer le message','Efase mesaj la','Delete message'),s:T3('Supprimer la story','Efase istwa a','Delete story')}[o.t];
+h+=item('del','🗑',lbl,1)+item('x','✕',T3('Annuler','Anile','Cancel'));
+if(!mine)h=`<div class='path' style='padding:6px 14px'>👑 ${T3('Modération : vous pouvez masquer ou supprimer, mais pas modifier le contenu d’un membre.','Moderasyon : ou ka kache oswa efase, men ou pa ka modifye sa yon manm ekri.','Moderation: you can hide or delete, but not edit a member’s content.')}</div>`+h;
+if(o.t==='s'&&svs){clearTimeout(stt)}
+odlg(h)}
+const rmFiles=ps=>{ps=ps.filter(Boolean);if(ps.length)SB.storage.from('media').remove(ps).catch(()=>{})};
+async function oAct(a){const o=OCUR,T=t=>SB.from(t);let r=null;
+const obj=o[o.t],tbl={p:'posts',c:'comments',m:'messages',s:'stories'}[o.t],id=obj.dbid;
+if(a==='x'){odlg(null);OCUR=null;if(o.t==='s'&&svs)renderStory();return}
+if(a==='edit'){odlg(`<b style='display:block;padding:8px 6px'>✏️ ${T3('Modifier','Modifye','Edit')}</b><textarea id='oet' rows='4' maxlength='${o.t==='p'?5000:o.t==='m'?4000:2000}'>${obj.t}</textarea><div class='row' style='justify-content:flex-end;gap:8px'><button class='pill gh' data-oa='x'>${T3('Annuler','Anile','Cancel')}</button><button class='pill' data-oa='save'>${T3('Enregistrer','Anrejistre','Save')}</button></div>`);const t=document.getElementById('oet');t.focus();t.setSelectionRange(t.value.length,t.value.length);return}
+if(a==='save'){const v=document.getElementById('oet').value.trim();const hasMedia=(o.t==='p'&&(o.p.img||o.p.au))||obj.au;
+ if(!v&&!hasMedia)return toast(T3('Le texte ne peut pas être vide. Supprimez plutôt.','Tèks la pa ka vid. Efase l pito.','Text can’t be empty. Delete instead.'));
+ r=await T(tbl).update({body:v||null}).eq('id',id);if(!r.error)toast(T3('Modifié ✔','Modifye ✔','Edited ✔'))}
+if(a==='noimg'){r=await T('posts').update({image_path:null}).eq('id',id);if(!r.error){rmFiles([o.p.ip]);toast(T3('Photo retirée','Foto retire','Photo removed'))}}
+if(a==='noau'){r=await T(tbl).update({audio_path:null}).eq('id',id);if(!r.error){rmFiles([obj.ap]);toast(T3('Message vocal retiré','Mesaj vokal retire','Voice message removed'))}}
+if(a==='hide'||a==='unhide'){r=await T('comments').update({hidden:a==='hide'}).eq('id',id);if(!r.error){await T('admin_log').insert({action:a==='hide'?'Commentaire masqué':'Commentaire rétabli'});toast(a==='hide'?T3('Commentaire masqué','Kòmantè kache','Comment hidden'):T3('Commentaire rétabli','Kòmantè retabli','Comment restored'))}}
+if(a==='del'){const q={p:T3('Supprimer cette publication et ses commentaires ?','Efase piblikasyon sa a ak kòmantè l yo ?','Delete this post and its comments?'),c:T3('Supprimer ce commentaire et ses réponses ?','Efase kòmantè sa a ak repons li yo ?','Delete this comment and its replies?'),m:T3('Supprimer ce message ? Il disparaîtra aussi chez votre correspondant.','Efase mesaj sa a ? L ap disparèt lakay lòt moun nan tou.','Delete this message? It will also disappear for the other person.'),s:T3('Supprimer cette story ?','Efase istwa sa a ?','Delete this story?')}[o.t];
+ if(!confirm(q))return;r=await T(tbl).delete().eq('id',id);
+ if(!r.error){const mine=obj.a===meL()||obj.f===meL();rmFiles([obj.ip,obj.ap]);if(!mine&&ISADM)await T('admin_log').insert({action:{p:'Publication supprimée par l’admin',c:'Commentaire supprimé par l’admin',s:'Story supprimée par l’admin'}[o.t]||'Suppression'});
+  if(o.t==='s'&&svs){svs=null;renderStory()}if(o.t==='p'&&cs===obj.id)cs=null;
+  toast({p:T3('Publication supprimée','Piblikasyon efase','Post deleted'),c:T3('Commentaire supprimé','Kòmantè efase','Comment deleted'),m:T3('Message supprimé','Mesaj efase','Message deleted'),s:T3('Story supprimée','Istwa efase','Story deleted')}[o.t])}}
+if(r&&r.error)return toast(T3('Action impossible : ','Aksyon an pa mache : ','Action failed: ')+r.error.message);
+odlg(null);OCUR=null;kickSync(0,true)}
+document.addEventListener('click',e=>{if(!SB)return;const b=e.target.closest('[data-om],[data-oa]');
+if(!b){if(e.target.id==='odlg'){odlg(null);if(OCUR&&OCUR.t==='s'&&svs)renderStory();OCUR=null}return}
+e.stopPropagation();e.preventDefault();if(b.dataset.om){const o=OREF[b.dataset.om];if(o)openOpts(o)}else oAct(b.dataset.oa)},true);
 
 BOOT().finally(hideSplash);setTimeout(hideSplash,7000);
 const wr0=document.querySelector('.wrap');if(wr0)wr0.scrollLeft=(wr0.scrollWidth-wr0.clientWidth)/2;

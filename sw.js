@@ -1,7 +1,7 @@
 // BoSane — service worker : l'application s'ouvre même avec une connexion faible.
 // Changez ce numéro à chaque nouvelle version de index.html.
-const VERSION = 'bosane-v2';
-const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png',
+const VERSION = 'bosane-v3';
+const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './badge-96.png',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'];
 
 self.addEventListener('install', e => {
@@ -30,7 +30,7 @@ self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: 'BoSane', body: e.data ? e.data.text() : '' }; }
   e.waitUntil(self.registration.showNotification(d.title || 'BoSane', {
-    body: d.body || '', icon: 'icon-192.png', badge: 'icon-192.png', tag: d.tag || undefined,
+    body: d.body || '', icon: 'icon-192.png', badge: 'badge-96.png', tag: d.tag || undefined,
     renotify: !!d.tag, data: { url: d.url || './' }, vibrate: [80, 40, 80]
   }));
 });

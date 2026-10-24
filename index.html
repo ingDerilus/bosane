@@ -837,7 +837,7 @@ const MSG=[
 {f:'th',to:'an',h:4,ol:'fr',x:['Bien sûr tata, je te l’envoie ce soir 😊','Wi tant, m ap voye l ba ou aswè a 😊','Of course, auntie, I’ll send it tonight 😊'],rd:1},
 {f:'pa',to:'th',h:20,ol:'fr',x:['N’oublie pas d’appeler mamie ce week-end ❤️','Pa bliye rele granmè wikenn sa a ❤️','Don’t forget to call grandma this weekend ❤️'],rd:0},
 {f:'le',to:'th',h:1,ol:'en',x:['Salut grand frère ! Tu viens à Orlando pour les retrouvailles ?','Alo gran frè ! Ou ap vini Orlando pou reyinyon an ?','Hey big bro! Are you coming to Orlando for the reunion?'],rd:0}];
-const mtext=m=>m.au&&!m.t?'🎤 '+T3('Message vocal','Mesaj vokal','Voice message'):m.x?m.x[LI[m.ol]||0]:m.t;
+const mtext=m=>!m.t&&(m.vd||m.vfile)?'🎬 '+T3('Vidéo','Videyo','Video'):!m.t&&m.im?'📷 '+T3('Photo','Foto','Photo'):m.au&&!m.t?'🎤 '+T3('Message vocal','Mesaj vokal','Voice message'):m.x?m.x[LI[m.ol]||0]:m.t;
 const thread=o=>MSG.filter(m=>(m.f===me&&m.to===o)||(m.f===o&&m.to===me)).sort((a,b)=>b.h-a.h);
 const ICON={welcome:'🎉',birthday:'🎂',soon:'🎈',event:'📅'};
 posts.push(
@@ -1357,6 +1357,7 @@ const SB_URL='https://mofdfecdiyigeufpnktk.supabase.co',SB_KEY='sb_publishable_7
 const SB=window.supabase&&window.supabase.createClient?window.supabase.createClient(SB_URL,SB_KEY,{auth:{flowType:'implicit',detectSessionInUrl:true,persistSession:true,autoRefreshToken:true,lock:async(n,t,fn)=>await fn()}}):null;
 const unesc=s=>String(s==null?'':s).replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
 let UID=null,MYDB=null,ISADM=false,READY=false,SNAP=null,CODES=[],DIRTY=0,INTERNAL=false;
+let FEEDLIM=40,MSGLIM=600,FEEDMORE=false;
 let syncing=false,loading=false,againLoad=false,againSync=false,tSync=null,forceNext=false,FIRST=true;
 const A2L={},L2A={},URLC={},pendDel=new Map(),DD={},MEMT={},MEMV={};
 const L=id=>id==null?null:(A2L[id]||id),D=id=>id==null?null:(L2A[id]||id);
@@ -1431,11 +1432,24 @@ const {error}=await SB.storage.from('media').upload(path,b,{contentType:ct});if(
 
 // --- chargement complet depuis le serveur ---
 async function reload(){if(!SB)return;if(loading){againLoad=true;return}loading=true;const d0=DIRTY;
-try{const q=t=>SB.from(t).select('*');
-const res=await Promise.all([q('profiles'),q('parent_links'),q('unions'),q('invitations'),q('posts').order('created_at',{ascending:false}).limit(300),q('comments').order('created_at'),q('post_reactions'),q('comment_reactions'),q('reports'),q('rsvps'),q('messages').order('created_at'),q('stories').order('created_at'),q('story_reactions'),q('story_views'),ISADM?q('admin_log').order('created_at',{ascending:false}).limit(60):Promise.resolve({data:[]})]);
-const er=res.find(r=>r.error);if(er)throw er.error;
-const R=res.map(r=>r.data||[]);
-await signAll([...R[0].map(x=>x.photo_path),...R[0].map(x=>x.memorial_video_path),...R[4].map(x=>x.image_path),...R[4].map(x=>x.audio_path),...R[5].map(x=>x.audio_path),...R[10].map(x=>x.audio_path),...R[11].map(x=>x.image_path)]);
+try{const q=t=>SB.from(t).select('*');const nowIso=new Date().toISOString();
+// 1) l'essentiel : arbre, publications récentes (par pages) + épinglées, messages récents, stories actives
+const A=await Promise.all([q('profiles'),q('parent_links'),q('unions'),q('invitations'),
+ q('posts').order('created_at',{ascending:false}).limit(FEEDLIM),q('posts').gt('pinned_until',nowIso),
+ q('messages').order('created_at',{ascending:false}).limit(MSGLIM),
+ ISADM?q('stories').order('created_at'):q('stories').gt('expires_at',nowIso).order('created_at'),
+ ISADM?q('admin_log').order('created_at',{ascending:false}).limit(60):Promise.resolve({data:[]})]);
+let er=A.find(r=>r.error);if(er)throw er.error;
+const [pr0,pl0,un0,inv0,po0,pin0,ms0,st0,lg0]=A.map(r=>r.data||[]);
+const seenP=new Set(po0.map(x=>x.id));const po=po0.concat(pin0.filter(x=>!seenP.has(x.id)));FEEDMORE=po0.length>=FEEDLIM;
+const pids=po.map(x=>x.id),sids=st0.map(x=>x.id),inn=(t,c,ids)=>ids.length?q(t).in(c,ids):Promise.resolve({data:[]});
+// 2) seulement ce qui concerne les publications et stories chargées
+const B=await Promise.all([inn('comments','post_id',pids),inn('post_reactions','post_id',pids),inn('reports','post_id',pids),inn('rsvps','post_id',pids),inn('story_reactions','story_id',sids),inn('story_views','story_id',sids)]);
+er=B.find(r=>r.error);if(er)throw er.error;
+const [co0,prx0,rep0,rsv0,srx0,sv0]=B.map(r=>r.data||[]);co0.sort((a,b)=>a.created_at<b.created_at?-1:1);
+const C2=await inn('comment_reactions','comment_id',co0.map(x=>x.id));if(C2.error)throw C2.error;
+const R=[pr0,pl0,un0,inv0,po,co0,prx0,C2.data||[],rep0,rsv0,ms0.slice().reverse(),st0,srx0,sv0,lg0];
+await signAll([...R[0].map(x=>x.photo_path),...R[0].map(x=>x.memorial_video_path),...R[4].map(x=>x.image_path),...R[4].map(x=>x.audio_path),...R[4].map(x=>x.video_path),...R[10].map(x=>x.image_path),...R[10].map(x=>x.video_path),...R[5].map(x=>x.audio_path),...R[10].map(x=>x.audio_path),...R[11].map(x=>x.image_path)]);
 if(DIRTY!==d0&&!FIRST){loading=false;kickSync(0,true);return}
 apply(...R);SNAP=snap();READY=true}
 catch(e){toast(T3('Serveur injoignable : ','Sèvè a pa reponn : ','Server unreachable: ')+(e.message||e))}
@@ -1460,7 +1474,7 @@ const blood0=i=>by[i]&&(by[i].par||i==='jo')?1:0;
 P.forEach(p=>{if(p.par&&p.par.length>1)p.par.sort((a,b)=>blood0(b)-blood0(a))});
 const now=Date.now(),hh=t=>Math.max(0,Math.floor((now-Date.parse(t))/HR)),P2=new Map();
 posts.length=0;
-po.filter(r=>!pendDel.has('p'+r.id)).forEach(r=>{const p={id:r.id,dbid:r.id,a:r.author_id?L(r.author_id):'admin',h:hh(r.created_at),ts:Date.parse(r.created_at),t:esc(r.body||''),img:U(r.image_path),au:U(r.audio_path),ip:r.image_path,ap:r.audio_path,ed:!!r.edited_at,pin:r.pinned_until?Date.parse(r.pinned_until):0,mem:L(r.memorial_of),l:[],r:{},c:[],cl:r.closed?1:0,rb:[],o:0,rv:{}};
+po.filter(r=>!pendDel.has('p'+r.id)).forEach(r=>{const p={id:r.id,dbid:r.id,a:r.author_id?L(r.author_id):'admin',h:hh(r.created_at),ts:Date.parse(r.created_at),t:esc(r.body||''),img:U(r.image_path),au:U(r.audio_path),ip:r.image_path,ap:r.audio_path,vid:U(r.video_path),vp:r.video_path,ed:!!r.edited_at,pin:r.pinned_until?Date.parse(r.pinned_until):0,mem:L(r.memorial_of),l:[],r:{},c:[],cl:r.closed?1:0,rb:[],o:0,rv:{}};
 if(r.kind==='welcome')p.sys={k:'welcome',id:L(r.subject_id)};
 if(r.kind==='birthday')p.sys={k:'birthday',id:L(r.subject_id)};
 if(r.kind==='memorial')p.sys={k:'memorial',id:L(r.subject_id)};
@@ -1474,7 +1488,7 @@ crx.forEach(x=>{const c=C.get(x.comment_id);if(c)c.r[L(x.member_id)]=x.emoji});
 const top=c=>{let k=c;while(k.par&&C.get(k.par))k=C.get(k.par);return k};
 C.forEach(c=>{const p=P2.get(c.pid);if(!p)return;if(!c.par||!C.get(c.par))p.c.push(c);else top(c).re.push(c)});
 posts.forEach(p=>{p.l=Object.keys(p.r)});
-MSG.length=0;ms.forEach(r=>MSG.push({i:r.id,dbid:r.id,f:L(r.sender_id),to:L(r.recipient_id),h:hh(r.created_at),t:esc(r.body||''),au:U(r.audio_path),ap:r.audio_path,ed:!!r.edited_at,rd:r.read_at?1:0,q:r.reply_to,ol:'fr'}));
+MSG.length=0;ms.forEach(r=>MSG.push({i:r.id,dbid:r.id,f:L(r.sender_id),to:L(r.recipient_id),h:hh(r.created_at),t:esc(r.body||''),au:U(r.audio_path),ap:r.audio_path,im:U(r.image_path),ip:r.image_path,vd:U(r.video_path),vp:r.video_path,ed:!!r.edited_at,rd:r.read_at?1:0,q:r.reply_to,ol:'fr'}));
 STORIES.length=0;st.filter(r=>!pendDel.has('s'+r.id)).forEach(r=>STORIES.push({id:'d'+r.id,dbid:r.id,a:L(r.author_id),ts:Date.parse(r.created_at),t:esc(r.body||''),bg:r.bg||0,img:U(r.image_path),ip:r.image_path}));
 Object.keys(SR).forEach(k=>delete SR[k]);srx.forEach(x=>{(SR['d'+x.story_id]=SR['d'+x.story_id]||{})[L(x.member_id)]=x.emoji});
 const ML=meL();sv.forEach(x=>{if(L(x.member_id)===ML)SEEN.add('d'+x.story_id)});
@@ -1504,7 +1518,7 @@ const T=t=>SB.from(t);
 posts.forEach(p=>{p.r=p.r||{};p.rb=p.rb||[];p.rv=p.rv||{};p.c=p.c||[];
 if(!p.dbid){if(p.sending)return;
   if(p.sys&&p.sys.k==='event'&&ISADM){p.sending=1;run(async()=>ok(await T('posts').insert({kind:'event',event_title:unesc(p.sys.ev.title).slice(0,80),event_date:p.sys.ev.iso||null,event_place:unesc(p.sys.ev.place).slice(0,80)||null})))}
-  else if(!p.sys&&ME&&p.a===ME){p.sending=1;run(async()=>{const ip=p.img?await upload(p.img):null,ap=p.au?await upload(p.au):null;ok(await T('posts').insert({author_id:MYDB,body:unesc(p.t)||null,image_path:ip,audio_path:ap,memorial_of:p.mem?D(p.mem):null}))})}
+  else if(!p.sys&&ME&&p.a===ME){p.sending=1;run(async()=>{const ip=p.img?await upload(p.img):null,ap=p.au?await upload(p.au):null,vp=p.vfile?await uploadBlob(p.vfile):null;ok(await T('posts').insert({author_id:MYDB,body:unesc(p.t)||null,image_path:ip,audio_path:ap,video_path:vp,memorial_of:p.mem?D(p.mem):null}))})}
   else if(!p.sys&&p.a==='admin'){p.sending=1;later=true;const i=posts.indexOf(p);if(i>=0)posts.splice(i,1);toast(T3('Pour publier, passez en membre : menu ☰ → « Je suis ».','Pou pibliye, pase an manm : meni ☰ → « Mwen se ».','To post, switch to your member profile: menu ☰ → “I am”.'))}
   return}
 const s=S.posts.get(p.dbid);if(!s)return;
@@ -1527,7 +1541,7 @@ pendDel.forEach((t0,k)=>{const id=+k.slice(1),isP=k[0]==='p';if(isP?presP.has(id
   if(Date.now()-t0<5000){later=true;return}
   run(async()=>{const r=await T(isP?'posts':'stories').delete().eq('id',id);ok(r);pendDel.delete(k)})});
 // messages
-MSG.forEach(m=>{if(!m.dbid){if(!m.sending&&ME&&m.f===ME&&by[m.to]){m.sending=1;run(async()=>{const ap=m.au?await upload(m.au):null;ok(await T('messages').insert({sender_id:MYDB,recipient_id:D(m.to),body:unesc(m.t)||null,audio_path:ap,reply_to:m.q&&m.q<1e12?m.q:null}))})}return}
+MSG.forEach(m=>{if(!m.dbid){if(!m.sending&&ME&&m.f===ME&&by[m.to]){m.sending=1;run(async()=>{const ap=m.au?await upload(m.au):null,ip=m.imgData?await upload(m.imgData):null,vp=m.vfile?await uploadBlob(m.vfile):null;ok(await T('messages').insert({sender_id:MYDB,recipient_id:D(m.to),body:unesc(m.t)||null,audio_path:ap,image_path:ip,video_path:vp,reply_to:m.q&&m.q<1e12?m.q:null}))})}return}
   if(ME&&m.to===ME&&m.rd&&!S.read.has(m.dbid)){S.read.add(m.dbid);run(async()=>ok(await T('messages').update({read_at:new Date().toISOString()}).eq('id',m.dbid)))}});
 // stories
 STORIES.forEach(x=>{if(!x.dbid){if(!x.sending&&ME&&x.a===ME&&String(x.id)[0]==='u'){x.sending=1;run(async()=>{const ip=x.img?await upload(x.img):null;ok(await T('stories').insert({author_id:MYDB,body:unesc(x.t)||null,bg:Math.min(9,x.bg||0),image_path:ip}))})}return}
@@ -1556,7 +1570,7 @@ const typing=()=>{const a=document.activeElement;return !!(a&&/TEXTAREA|INPUT/.t
 function refresh(){if(typing()||svs||sed||REC){setTimeout(refresh,5000);return}kickSync(0,true)}
 let LIVE=false;function live(){if(LIVE||!SB)return;LIVE=true;let t=null;const k=()=>{clearTimeout(t);t=setTimeout(refresh,800)};
 try{SB.channel('bosane-live').on('postgres_changes',{event:'*',schema:'public',table:'posts'},k).on('postgres_changes',{event:'*',schema:'public',table:'comments'},k).on('postgres_changes',{event:'*',schema:'public',table:'messages'},k).subscribe()}catch(e){}
-setInterval(()=>{if(!document.hidden)refresh()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()})}
+setInterval(()=>{if(!document.hidden&&Date.now()-(window.LASTREF||0)>(ECO?15:3)*60000){window.LASTREF=Date.now();refresh()}},30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()})}
 
 // --- annonces de bienvenue sans détail de lien ---
 const sbW=sysBody;sysBody=function(p){const s=p.sys;
@@ -1900,7 +1914,7 @@ if(a==='x'||!o){odlg(null);OCUR=null;MMID=null;if(o&&o.t==='s'&&svs)renderStory(
 const obj=o[o.t],tbl={p:'posts',c:'comments',m:'messages',s:'stories'}[o.t],id=obj.dbid;
 if(a==='x'){odlg(null);OCUR=null;if(o.t==='s'&&svs)renderStory();return}
 if(a==='edit'){odlg(`<b style='display:block;padding:8px 6px'>✏️ ${T3('Modifier','Modifye','Edit')}</b><textarea id='oet' rows='4' maxlength='${o.t==='p'?5000:o.t==='m'?4000:2000}'>${obj.t}</textarea><div class='row' style='justify-content:flex-end;gap:8px'><button class='pill gh' data-oa='x'>${T3('Annuler','Anile','Cancel')}</button><button class='pill' data-oa='save'>${T3('Enregistrer','Anrejistre','Save')}</button></div>`);const t=document.getElementById('oet');t.focus();t.setSelectionRange(t.value.length,t.value.length);return}
-if(a==='save'){const v=document.getElementById('oet').value.trim();const hasMedia=(o.t==='p'&&(o.p.img||o.p.au))||obj.au;
+if(a==='save'){const v=document.getElementById('oet').value.trim();const hasMedia=(o.t==='p'&&(o.p.img||o.p.au||o.p.vid))||obj.au||obj.im||obj.vd;
  if(!v&&!hasMedia)return toast(T3('Le texte ne peut pas être vide. Supprimez plutôt.','Tèks la pa ka vid. Efase l pito.','Text can’t be empty. Delete instead.'));
  r=await T(tbl).update({body:v||null}).eq('id',id);if(!r.error)toast(T3('Modifié ✔','Modifye ✔','Edited ✔'))}
 if(a==='noimg'){r=await T('posts').update({image_path:null}).eq('id',id);if(!r.error){rmFiles([o.p.ip]);toast(T3('Photo retirée','Foto retire','Photo removed'))}}
@@ -1908,7 +1922,7 @@ if(a==='noau'){r=await T(tbl).update({audio_path:null}).eq('id',id);if(!r.error)
 if(a==='hide'||a==='unhide'){r=await T('comments').update({hidden:a==='hide'}).eq('id',id);if(!r.error){await T('admin_log').insert({action:a==='hide'?'Commentaire masqué':'Commentaire rétabli'});toast(a==='hide'?T3('Commentaire masqué','Kòmantè kache','Comment hidden'):T3('Commentaire rétabli','Kòmantè retabli','Comment restored'))}}
 if(a==='del'){const q={p:T3('Supprimer cette publication et ses commentaires ?','Efase piblikasyon sa a ak kòmantè l yo ?','Delete this post and its comments?'),c:T3('Supprimer ce commentaire et ses réponses ?','Efase kòmantè sa a ak repons li yo ?','Delete this comment and its replies?'),m:T3('Supprimer ce message ? Il disparaîtra aussi chez votre correspondant.','Efase mesaj sa a ? L ap disparèt lakay lòt moun nan tou.','Delete this message? It will also disappear for the other person.'),s:T3('Supprimer cette story ?','Efase istwa sa a ?','Delete this story?')}[o.t];
  if(!confirm(q))return;r=await T(tbl).delete().eq('id',id);
- if(!r.error){const mine=obj.a===meL()||obj.f===meL();rmFiles([obj.ip,obj.ap]);if(!mine&&ISADM)await T('admin_log').insert({action:{p:'Publication supprimée par l’admin',c:'Commentaire supprimé par l’admin',s:'Story supprimée par l’admin'}[o.t]||'Suppression'});
+ if(!r.error){const mine=obj.a===meL()||obj.f===meL();rmFiles([obj.ip,obj.ap,obj.vp]);if(!mine&&ISADM)await T('admin_log').insert({action:{p:'Publication supprimée par l’admin',c:'Commentaire supprimé par l’admin',s:'Story supprimée par l’admin'}[o.t]||'Suppression'});
   if(o.t==='s'&&svs){svs=null;renderStory()}if(o.t==='p'&&cs===obj.id)cs=null;
   toast({p:T3('Publication supprimée','Piblikasyon efase','Post deleted'),c:T3('Commentaire supprimé','Kòmantè efase','Comment deleted'),m:T3('Message supprimé','Mesaj efase','Message deleted'),s:T3('Story supprimée','Istwa efase','Story deleted')}[o.t])}}
 if(r&&r.error)return toast(T3('Action impossible : ','Aksyon an pa mache : ','Action failed: ')+r.error.message);
@@ -2089,6 +2103,327 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-pin]
  const p=OCUR.p,on=b.dataset.pin==='on';const r=await SB.from('posts').update({pinned_until:on?new Date(Date.now()+24*HR).toISOString():null}).eq('id',p.dbid);
  if(r.error)return toast(r.error.message);await SB.from('admin_log').insert({action:on?'Publication épinglée 24 h':'Publication désépinglée'});
  odlg(null);OCUR=null;toast(on?T3('📌 Épinglée en haut du fil pour 24 h','📌 Kole anlè fil la pou 24 è','📌 Pinned for 24 h'):T3('Publication désépinglée','Piblikasyon an pa kole ankò','Post unpinned'));kickSync(0,true)},true);
+
+
+// ===== Vidéos (et photos) dans le fil et les messages =====
+document.head.insertAdjacentHTML('beforeend',`<style>
+.pvid{display:block;width:100%;max-height:520px;background:#000}
+.pvwrap{position:relative}.pvwrap .up{position:absolute;left:10px;top:10px;background:rgba(0,0,0,.65);color:#fff;font-size:.8rem;padding:4px 10px;border-radius:14px}
+.vprev{position:relative;margin:8px 0 0}.vprev video{width:100%;max-height:220px;border-radius:12px;background:#000;display:block}
+.vprev button{position:absolute;top:6px;right:6px}
+.mmed{display:block;max-width:240px;width:100%;border-radius:12px;margin-bottom:4px;background:#000}
+</style>`);
+document.body.insertAdjacentHTML('beforeend',"<input type='file' id='fvpost' accept='video/*' hidden><input type='file' id='fmatt' accept='image/*,video/*' hidden>");
+const MAXV=50*1024*1024;let DVID=null;
+const tooBig=()=>toast(T3('Vidéo trop lourde (50 Mo maximum). Raccourcissez-la ou réduisez sa qualité dans la Galerie.','Videyo a twò lou (50 Mo maks). Fè l pi kout oswa bese kalite l nan Galri a.','Video too large (50 MB max). Trim it or lower its quality in your Gallery.'));
+// sélection
+document.addEventListener('change',async e=>{const t=e.target;if(!SB)return;
+ if(t.id==='fvpost'&&t.files[0]){const f=t.files[0];t.value='';if(f.size>MAXV)return tooBig();if(DVID)URL.revokeObjectURL(DVID.url);DVID={file:f,url:URL.createObjectURL(f)};render()}
+ if(t.id==='fmatt'&&t.files[0]){const f=t.files[0];t.value='';if(!mv||!by[mv])return;const isV=f.type.startsWith('video/');if(isV&&f.size>MAXV)return tooBig();
+  const ta=document.getElementById('mi'),cap=ta?esc(ta.value.trim()):'';if(ta)ta.value='';
+  const m={f:me,to:mv,h:0,ol:lang,t:cap,rd:0,i:++mid,q:mrt};mrt=null;
+  if(isV){m.vfile=f;m.vd=URL.createObjectURL(f)}else{m.imgData=await loadImg(f,1280,false);m.im=m.imgData}
+  MSG.push(m);render();toast(isV?T3('Envoi de la vidéo… gardez BoSane ouvert.','N ap voye videyo a… kite BoSane louvri.','Sending video… keep BoSane open.'):T3('Photo envoyée','Foto voye','Photo sent'))}});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-vpick],[data-vx],[data-matt]');if(!b||!SB)return;e.stopPropagation();e.preventDefault();
+ if(b.dataset.vpick)document.getElementById('fvpost').click();
+ if(b.dataset.vx){if(DVID)URL.revokeObjectURL(DVID.url);DVID=null;render()}
+ if(b.dataset.matt)document.getElementById('fmatt').click()},true);
+// publier avec une vidéo
+document.addEventListener('click',e=>{const b=e.target.closest('[data-pp],[data-pub]');if(!b||!SB||!DVID||me==='admin')return;e.stopPropagation();e.preventDefault();
+ const el=document.getElementById(b.dataset.pub?'nt':'pn'),v=el?esc(el.value.trim()):'';if(el)el.value='';
+ posts.push({id:pid++,a:me,h:0,t:v,img:DIMG,vfile:DVID.file,vid:DVID.url,l:[],r:{},c:[],cl:0,rb:[],o:0});DIMG=null;DVID=null;render();
+ toast(T3('Envoi de la vidéo… gardez BoSane ouvert.','N ap voye videyo a… kite BoSane louvri.','Sending video… keep BoSane open.'))},true);
+// affichage dans les publications
+const phV=postHtml;postHtml=function(p){let x=phV(p);if(!p.vid)return x;
+ const v=`<div class='pvwrap'><video class='pvid' controls playsinline preload='metadata' src='${p.vid}'></video>${p.vfile&&!p.dbid?`<span class='up'>⏳ ${T3('Envoi en cours…','N ap voye l…','Uploading…')}</span>`:''}</div>`;
+ return x.replace(/(<div class='fb'[^>]*>[\s\S]*?<\/div>)/,m=>m+v)};
+// boutons et aperçus, après chaque affichage
+const rVid=render;render=function(){rVid();if(!SB||!READY||me==='admin')return;
+ document.querySelectorAll('#feed .comp [data-cam], #me .comp [data-cam]').forEach(cam=>{const comp=cam.closest('.comp');if(!comp)return;
+  if(!comp.querySelector('[data-vpick]'))cam.insertAdjacentHTML('afterend',`<button class='ib camg' data-vpick='1' aria-label='${T3('Ajouter une vidéo','Ajoute yon videyo','Add a video')}' style='font-size:1.25rem'>🎬</button>`);
+  const top=comp.querySelector('.top');if(top&&DVID&&!comp.querySelector('.vprev')){top.insertAdjacentHTML('afterend',`<div class='vprev'><video src='${DVID.url}' controls playsinline preload='metadata'></video><button class='ib' data-vx='1' aria-label='${T3('Retirer la vidéo','Retire videyo a','Remove video')}'>${svg('x',16)}</button></div>`);comp.classList.add('has')}});
+ const mic=document.querySelector("[data-vrec='m']");if(mic&&!mic.parentElement.querySelector('[data-matt]'))mic.insertAdjacentHTML('beforebegin',`<button class='ib' data-matt='1' aria-label='${T3('Envoyer une photo ou une vidéo','Voye yon foto oswa yon videyo','Send a photo or video')}' style='font-size:1.15rem'>📎</button>`);
+ document.querySelectorAll('[data-mr]').forEach(b=>{const m=MSG.find(x=>x.i==b.dataset.mr);if(!m||!(m.im||m.vd))return;const row=b.closest('.mrow'),mb=row&&row.querySelector('.mb');if(!mb||mb.querySelector('.mmed'))return;
+  mb.insertAdjacentHTML('afterbegin',m.vd?`<video class='mmed' controls playsinline preload='metadata' src='${m.vd}'></video>${m.vfile&&!m.dbid?`<div class='path'>⏳ ${T3('Envoi…','N ap voye…','Sending…')}</div>`:''}`:`<img class='mmed' src='${m.im}' alt=''>`)})};
+
+
+// ===== Cloche 🔔 : toutes les notifications dans l'application =====
+const notifs0=notifs;
+notifs=function(){const out=notifs0();if(me==='admin'||!by[me])return out;
+ const nm1=id=>by[id]?by[id].n:'';const others=(obj)=>Object.keys(obj||{}).filter(u=>u!==me&&by[u]);
+ const dist=typeof famDist==='function'?famDist(me):{};const close=id=>dist[id]!=null&&dist[id]>0&&dist[id]<=2;
+ posts.forEach(p=>{
+  // réactions à mes publications (regroupées)
+  if(p.a===me&&!p.sys){const o=others(p.r);if(o.length)out.push({k:'rx:'+p.id+':'+o.length,t:'react',f:o[0],n:o.length,e:p.r[o[0]],p:p.id,h:p.h})}
+  // réactions à mes commentaires
+  const walk=c=>{if(c.a===me){const o=others(c.r);if(o.length)out.push({k:'cx:'+(c.dbid||p.id)+':'+o.length,t:'creact',f:o[0],n:o.length,e:c.r[o[0]],p:p.id,h:p.h})}(c.re||[]).forEach(walk)};(p.c||[]).forEach(walk);
+  // annonces
+  if(p.sys&&p.h<=24*7){const s=p.sys;
+   if(s.k==='welcome'&&s.id&&s.id!==me)out.push({k:'wl:'+p.id,t:'welcome',f:s.id,p:p.id,h:p.h});
+   if(s.k==='birthday'&&s.id&&p.h<=48)out.push({k:'bd:'+p.id,t:s.id===me?'mybday':'birthday',f:s.id,p:p.id,h:p.h});
+   if(s.k==='event')out.push({k:'ev:'+p.id,t:'event',ev:s.ev,p:p.id,h:p.h});
+   if(s.k==='memorial'&&s.id)out.push({k:'mm:'+p.id,t:'memorial',f:s.id,pf:s.id,h:p.h})}
+  // publication épinglée
+  if(p.pin&&p.pin>Date.now())out.push({k:'pin:'+p.id+':'+p.pin,t:'pinned',f:p.a!=='admin'?p.a:null,p:p.id,h:Math.max(0,Math.floor((Date.now()-(p.pin-24*HR))/HR))});
+  // publications des proches (3 derniers jours)
+  if(!p.sys&&p.a!==me&&p.h<=72&&close(p.a))out.push({k:'fp:'+p.id,t:p.mem?'souvenir':'fpost',f:p.a,mem:p.mem,vid:!!p.vid,img:!!p.img,p:p.id,h:p.h})});
+ // stories des proches
+ activeStories().filter(s=>s.a!==me&&close(s.a)).forEach(s=>out.push({k:'st:'+s.id,t:'story',f:s.a,s:s.a,h:Math.floor((Date.now()-s.ts)/HR)}));
+ // mes invitations validées : code à envoyer
+ (CODES||[]).filter(c=>c.by===UID&&c.m&&by[c.m]&&!by[c.m].dc).forEach(c=>out.push({k:'cd:'+c.code,t:'code',f:c.m,code:c.code,tree:1,h:0}));
+ const seen=new Set();return out.filter(n=>!seen.has(n.k)&&seen.add(n.k)).sort((a,b)=>a.h-b.h)};
+notifHtml=function(){const L=notifs();
+ const nm1=id=>id&&by[id]?by[id].n:'';
+ const more=n=>n.n>1?T3(` et ${n.n-1} autre${n.n>2?'s':''}`,` ak ${n.n-1} lòt`,` and ${n.n-1} other${n.n>2?'s':''}`):'';
+ const txt=n=>{const f=nm1(n.f);switch(n.t){
+  case 'sreact':return T3(`${f} a réagi à votre story ${n.e}`,`${f} reyaji ak istwa ou a ${n.e}`,`${f} reacted to your story ${n.e}`);
+  case 'mention':return T3(`${f} vous a mentionné`,`${f} mansyone ou`,`${f} mentioned you`);
+  case 'comment':return T3(`${f} a commenté votre publication`,`${f} kòmante piblikasyon ou an`,`${f} commented on your post`);
+  case 'reply':return T3(`${f} a répondu à votre commentaire`,`${f} reponn kòmantè ou a`,`${f} replied to your comment`);
+  case 'approve':return T3(`${n.q.n} demande à être rattaché(e) à vous (${kin3(n.q)})`,`${n.q.n} mande pou l konekte ak ou (${kin3(n.q)})`,`${n.q.n} asks to be linked to you (${kin3(n.q)})`);
+  case 'react':return T3(`${f}${more(n)} a${n.n>1?'ont':''} réagi ${n.e} à votre publication`,`${f}${more(n)} reyaji ${n.e} sou piblikasyon ou`,`${f}${more(n)} reacted ${n.e} to your post`).replace(' aont ',' ont ');
+  case 'creact':return T3(`${f}${more(n)} a${n.n>1?'ont':''} réagi ${n.e} à votre commentaire`,`${f}${more(n)} reyaji ${n.e} sou kòmantè ou`,`${f}${more(n)} reacted ${n.e} to your comment`).replace(' aont ',' ont ');
+  case 'welcome':return T3(`🎉 ${f} a rejoint la famille. Souhaitez-lui la bienvenue !`,`🎉 ${f} antre nan fanmi an. Swete l byenveni !`,`🎉 ${f} joined the family. Say welcome!`);
+  case 'birthday':return T3(`🎂 C’est l’anniversaire de ${f} ! Envoyez-lui un mot`,`🎂 Se fèt ${f} ! Voye yon ti mo ba li`,`🎂 It’s ${f}’s birthday! Send a note`);
+  case 'mybday':return T3(`🎂 Joyeux anniversaire ! Toute la famille pense à vous 💛`,`🎂 Bòn fèt ! Tout fanmi an panse a ou 💛`,`🎂 Happy birthday! The whole family is thinking of you 💛`);
+  case 'event':return T3(`📅 Nouvel événement : ${n.ev&&n.ev.title||''}`,`📅 Nouvo evènman : ${n.ev&&n.ev.title||''}`,`📅 New event: ${n.ev&&n.ev.title||''}`);
+  case 'memorial':return T3(`🕊 Une page souvenir est ouverte pour ${f}`,`🕊 Yon paj souvni louvri pou ${f}`,`🕊 A memorial page is open for ${f}`);
+  case 'pinned':return T3(`📌 À ne pas manquer : l’administrateur a épinglé une publication`,`📌 Pa rate sa : admin an kole yon piblikasyon anlè`,`📌 Don’t miss: the admin pinned a post`);
+  case 'fpost':return n.vid?T3(`${f} a publié une vidéo 🎬`,`${f} pibliye yon videyo 🎬`,`${f} posted a video 🎬`):n.img?T3(`${f} a publié une photo 📸`,`${f} pibliye yon foto 📸`,`${f} posted a photo 📸`):T3(`${f} a publié une nouvelle`,`${f} pibliye yon nouvèl`,`${f} posted an update`);
+  case 'souvenir':return T3(`🕊 ${f} a partagé un souvenir de ${nm1(n.mem)}`,`🕊 ${f} pataje yon souvni ${nm1(n.mem)}`,`🕊 ${f} shared a memory of ${nm1(n.mem)}`);
+  case 'story':return T3(`⏱ ${f} a publié une story`,`⏱ ${f} pibliye yon istwa`,`⏱ ${f} posted a story`);
+  case 'code':return T3(`✅ ${f} est dans l’arbre : envoyez-lui son invitation 💌`,`✅ ${f} nan pyebwa a : voye envitasyon l 💌`,`✅ ${f} is in the tree: send their invitation 💌`);
+  default:return ''}};
+ const row=n=>{const fr=!seenN.has(n.k);const a=n.f&&by[n.f]?av(n.f,34):`<span class='av' style='width:34px;height:34px;background:${n.t==='event'?'#1f6fb2':n.t==='pinned'?'#f0a93b':'#8a7f72'}'>${n.t==='event'?'📅':n.t==='pinned'?'📌':n.q?n.q.n[0]:'🔔'}</span>`;
+  const go=n.p?` data-ngo='${n.p}'`:n.s?` data-nsv='${n.s}'`:n.pf?` data-pf='${n.pf}'`:n.tree?` data-tab='tree'`:'';
+  return `<div class='nt'${go}>${a}<div style='flex:1;min-width:0'><div>${txt(n)}</div><div class='path'>${ago2(n.h)}</div>${n.t==='approve'?`<div class='row' style='margin-top:6px'><button class='pill' data-ok='${n.q.id}'>${T3('Valider','Valide','Approve')}</button><button class='pill gh' data-no='${n.q.id}'>${T3('Refuser','Refize','Decline')}</button></div>`:''}${n.t==='code'?`<div class='row' style='margin-top:6px'><button class='pill wabtn' data-winv='${n.code}'>💌 ${T3('Inviter','Envite','Invite')}</button></div>`:''}${n.t==='birthday'?`<div class='row' style='margin-top:6px'><button class='pill gh' data-mo='${n.f}'>✉️ ${T3('Lui écrire','Ekri li','Write')}</button></div>`:''}</div>${fr?`<span class='nd'></span>`:''}</div>`};
+ const out=L.length?card(L.map(row).join('')):card(`<div class='path'>${T3('Aucune notification pour le moment.','Pa gen notifikasyon pou kounye a.','No notifications yet.')}</div>`);
+ L.forEach(n=>seenN.add(n.k));return out};
+
+
+// ===== Économie de données + sauvegarde =====
+var ECO=false;try{ECO=localStorage.getItem('bosane-eco')==='1'}catch(e){}
+if(ECO){FEEDLIM=20;MSGLIM=300}
+// fil par pages : bouton « Voir plus »
+const rEco=render;render=function(){rEco();if(!SB||!READY)return;
+ if(tab==='feed'){const f=document.getElementById('feed');if(f&&FEEDMORE&&!f.querySelector('.morep'))f.insertAdjacentHTML('beforeend',`<div class='comp morep' style='text-align:center'><button class='pill gh' data-morep='1'>${T3('Voir les publications plus anciennes','Gade piblikasyon ki pi ansyen yo','See older posts')}</button></div>`)}
+ if(ECO)document.querySelectorAll('video[preload=metadata]').forEach(v=>v.setAttribute('preload','none'))};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-morep]');if(!b||!SB)return;e.stopPropagation();e.preventDefault();b.disabled=true;b.textContent='…';FEEDLIM+=ECO?20:40;kickSync(0,true)},true);
+// menu ☰ : économie de données + sauvegarde (admin)
+const rmEco=renderMenu;renderMenu=function(){rmEco();if(mnuS!=='menu'||!SB||!READY)return;const dy=document.getElementById('mdyn');if(!dy||dy.querySelector('[data-eco]'))return;
+ const big=dy.querySelector("[data-mnu='big']");const h=`<button class='mi2' data-eco='1'><span style='font-size:1.25rem;width:22px;text-align:center'>📶</span><span>${(ECO?'✓ ':'')+T3('Économie de données','Ekonomi done','Data saver')}</span></button>`+(ISADM&&me==='admin'?`<button class='mi2' data-backup='1'><span style='font-size:1.25rem;width:22px;text-align:center'>💾</span><span>${T3('Télécharger une sauvegarde','Telechaje yon sovgad','Download a backup')}</span></button>`:'');
+ if(big)big.insertAdjacentHTML('afterend',h);else dy.insertAdjacentHTML('beforeend',h)};
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-eco],[data-backup]');if(!b||!SB)return;e.stopPropagation();e.preventDefault();mnuS=null;renderMenu();
+ if(b.dataset.eco){ECO=!ECO;try{localStorage.setItem('bosane-eco',ECO?'1':'0')}catch(_){}FEEDLIM=ECO?20:40;MSGLIM=ECO?300:600;
+  toast(ECO?T3('📶 Économie de données activée : moins de chargements, vidéos lues seulement à la demande.','📶 Ekonomi done aktive : mwens chajman, videyo jwe sèlman lè w mande.','📶 Data saver on: fewer refreshes, videos load only on tap.'):T3('Économie de données désactivée','Ekonomi done dezaktive','Data saver off'));kickSync(0,true);return}
+ if(b.dataset.backup){toast(T3('Préparation de la sauvegarde…','N ap prepare sovgad la…','Preparing backup…'));
+  const T=['profiles','parent_links','unions','invitations','posts','comments','post_reactions','comment_reactions','rsvps','stories','admin_log','chat_groups','group_members','poll_options','poll_votes'];
+  const out={app:'BoSane',version:1,date:new Date().toISOString(),note:'Sauvegarde administrateur — les messages privés ne sont pas inclus (confidentialité).',tables:{}};
+  for(const t of T){let all=[],from=0;for(;;){const r=await SB.from(t).select('*').range(from,from+999);if(r.error){break}all=all.concat(r.data||[]);if(!r.data||r.data.length<1000)break;from+=1000}out.tables[t]=all}
+  const blob=new Blob([JSON.stringify(out,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`BoSane-sauvegarde-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();
+  await SB.from('admin_log').insert({action:'Sauvegarde téléchargée'});toast(T3('💾 Sauvegarde téléchargée. Gardez-la en lieu sûr (Google Drive, ordinateur).','💾 Sovgad telechaje. Kenbe l yon kote ki an sekirite.','💾 Backup downloaded. Keep it somewhere safe.'))}},true);
+
+
+// ===== Conversations de groupe =====
+let GROUPS=[],gv=null,GSEND=0;
+document.head.insertAdjacentHTML('beforeend',`<style>
+.gav{width:42px;height:42px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:1.35rem;background:linear-gradient(135deg,#e6f0f8,#fdf0dc);flex:none}
+.gmsg{display:flex;gap:8px;margin:6px 0;align-items:flex-end}.gmsg.me{flex-direction:row-reverse}
+.gb{max-width:78%;padding:8px 12px;border-radius:16px;background:color-mix(in srgb,var(--txt) 7%,transparent);word-break:break-word}
+.gmsg.me .gb{background:var(--bl);color:#fff}.gb .who{font-size:.75rem;font-weight:700;margin-bottom:2px;opacity:.85}
+.gb audio,.gb video,.gb img{display:block;max-width:240px;width:100%;border-radius:10px;margin:2px 0}
+.gt{font-size:.68rem;opacity:.6;margin-top:3px}
+.ghead{display:flex;align-items:center;gap:10px}
+.gpick{max-height:46vh;overflow-y:auto;margin:8px 0;border:1px solid var(--line);border-radius:12px}
+.gpick label{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line)}.gpick label:first-child{border-top:0}
+.emo button{font-size:1.4rem;background:none;border:2px solid transparent;border-radius:10px;padding:2px 6px}.emo button.on{border-color:var(--bl)}
+</style>`);
+async function loadGroups(){if(!SB||!MYDB)return;try{
+ const [g,m,x]=await Promise.all([SB.from('chat_groups').select('*').order('id'),SB.from('group_members').select('*'),SB.from('group_messages').select('*').order('created_at',{ascending:false}).limit(ECO?200:500)]);
+ if(g.error||m.error||x.error)return;
+ await signAll([...x.data.map(r=>r.audio_path),...x.data.map(r=>r.image_path),...x.data.map(r=>r.video_path)]);
+ const ML=meL();
+ GROUPS=(g.data||[]).map(r=>{const mem=(m.data||[]).filter(y=>y.group_id===r.id);const mine=mem.find(y=>L(y.member_id)===ML);
+  const msgs=(x.data||[]).filter(y=>y.group_id===r.id).reverse().map(y=>({id:y.id,a:L(y.sender_id),t:esc(y.body||''),au:U(y.audio_path),im:U(y.image_path),vd:U(y.video_path),ap:y.audio_path,ip:y.image_path,vp:y.video_path,ts:Date.parse(y.created_at),ed:!!y.edited_at}));
+  const lr=mine?Date.parse(mine.last_read_at):(r.kind==='family'?Date.parse(r.created_at):0);
+  return {id:r.id,name:esc(r.name),emoji:r.emoji,kind:r.kind,by:L(r.created_by),members:r.kind==='family'?P.filter(p=>p.acc&&!p.dc).map(p=>p.id):mem.map(y=>L(y.member_id)),muted:!!(mine&&mine.muted),hasRow:!!mine,lr,msgs,unread:msgs.filter(y=>y.a!==ML&&y.ts>lr).length}})}catch(e){}}
+const rlG=reload;reload=async function(){await rlG.apply(this,arguments);if(READY){await loadGroups();INTERNAL=true;try{render()}finally{INTERNAL=false}}};
+const gUnread=()=>GROUPS.filter(g=>!g.muted).reduce((n,g)=>n+g.unread,0);
+const gPrev=m=>m?(m.t?unesc(m.t).slice(0,60):m.vd?'🎬 '+T3('Vidéo','Videyo','Video'):m.im?'📷 '+T3('Photo','Foto','Photo'):'🎤 '+T3('Vocal','Vokal','Voice')):T3('Aucun message','Pa gen mesaj','No messages');
+function groupsCard(){if(!MYDB||me==='admin')return '';const L2=GROUPS.slice().sort((a,b)=>(a.kind==='family'?-1:0)-(b.kind==='family'?-1:0)||((b.msgs.at(-1)||{ts:0}).ts-(a.msgs.at(-1)||{ts:0}).ts));
+ return card(`<div class='famh'><b>👥 ${T3('Groupes','Gwoup','Groups')}</b><button class='pill gh' data-gnew='1' style='padding:6px 12px'>＋ ${T3('Nouveau groupe','Nouvo gwoup','New group')}</button></div>`+
+ L2.map(g=>{const last=g.msgs.at(-1);return `<div class='nt' data-gopen='${g.id}'><span class='gav'>${g.emoji}</span><div style='flex:1;min-width:0'><b>${g.name}</b>${g.muted?' 🔕':''}<div class='path' style='white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>${last?`${last.a===meL()?T3('Vous','Ou','You'):(by[last.a]?by[last.a].n:'')} : `:''}${gPrev(last)}</div></div>${g.unread&&!g.muted?`<span class='bd'>${g.unread}</span>`:''}</div>`}).join(''))}
+const mlG=mlistHtml;mlistHtml=function(){return msq.trim()?mlG():groupsCard()+mlG()};
+const hm=ts=>{const d=new Date(ts),t=d.toLocaleTimeString(lang==='en'?'en-US':'fr-FR',{hour:'2-digit',minute:'2-digit'});return Date.now()-ts<20*HR?t:d.toLocaleDateString(lang==='en'?'en-US':'fr-FR',{day:'numeric',month:'short'})+' '+t};
+function groupThreadHtml(g){const ML=meL();
+ return card(`<div class='ghead'><button class='pill gh' data-gback='1'>←</button><span class='gav'>${g.emoji}</span><div style='flex:1;min-width:0'><b>${g.name}</b>${g.muted?' 🔕':''}<div class='path'>${g.kind==='family'?T3('Toute la famille','Tout fanmi an','Whole family'):g.members.map(x=>by[x]?by[x].n:'').filter(Boolean).slice(0,5).join(', ')+(g.members.length>5?'…':'')} · ${g.members.length} ${T3('membres','manm','members')}</div></div><button class='ib' data-gset='${g.id}' aria-label='${T3('Réglages du groupe','Paramèt gwoup la','Group settings')}' style='font-size:1.2rem'>⚙️</button></div>
+ <div class='msgs' id='gmsgs' style='max-height:58vh;overflow-y:auto;margin-top:8px'>${g.msgs.length?g.msgs.map(m=>{const mine=m.a===ML;return `<div class='gmsg${mine?' me':''}'>${mine?'':av(m.a,28)}<div class='gb'>${mine?'':`<div class='who'>${by[m.a]?by[m.a].n:''}</div>`}${m.vd?`<video controls playsinline preload='${ECO?'none':'metadata'}' src='${m.vd}'></video>`:''}${m.im?`<img src='${m.im}' alt=''>`:''}${m.au?`<audio controls preload='none' src='${m.au}'></audio>`:''}${m.t||''}<div class='gt'>${hm(m.ts)}${m.ed?' · '+T3('modifié','modifye','edited'):''}${mine&&m.id>0?` · <span data-gdel='${m.id}' style='cursor:pointer;text-decoration:underline'>${T3('supprimer','efase','delete')}</span>`:''}${m.id<0?' · ⏳':''}</div></div></div>`}).join(''):`<div class='path' style='text-align:center;padding:20px'>${T3('Écrivez le premier message 👋','Ekri premye mesaj la 👋','Write the first message 👋')}</div>`}</div>
+ <div class='ie'>${chips()}<div class='fcm' style='align-items:flex-end'><textarea id='gi' class='fi' rows='1' placeholder='${T3('Message au groupe…','Mesaj pou gwoup la…','Message the group…')}'></textarea><button class='ib' data-gatt='1' aria-label='${T3('Photo ou vidéo','Foto oswa videyo','Photo or video')}' style='font-size:1.15rem'>📎</button><button class='ib${REC?' recon':''}' data-vrec='g' data-vt='${g.id}' aria-label='${T3('Message vocal','Mesaj vokal','Voice message')}'>${svg('mic',20)}</button><button class='ib snd' data-gsend='${g.id}' aria-label='${L3('send')}'>${svg('send',18)}</button></div></div>`)}
+async function gMarkRead(g){if(!g)return;const now=new Date().toISOString();g.lr=Date.now();g.unread=0;
+ try{if(g.hasRow)await SB.from('group_members').update({last_read_at:now}).match({group_id:g.id,member_id:MYDB});else if(g.kind==='family'){await SB.from('group_members').insert({group_id:g.id,member_id:MYDB,last_read_at:now});g.hasRow=true}}catch(e){}}
+async function gSend(g,fields){const tmp={id:-(++GSEND),a:meL(),t:fields.body?esc(fields.body):'',ts:Date.now(),im:fields._im,vd:fields._vd,au:fields._au};g.msgs.push(tmp);render();
+ try{const row={group_id:g.id,sender_id:MYDB,body:fields.body||null};if(fields.imgData)row.image_path=await upload(fields.imgData);if(fields.vfile)row.video_path=await uploadBlob(fields.vfile);if(fields.audio)row.audio_path=await upload(fields.audio);
+  const r=await SB.from('group_messages').insert(row);if(r.error)throw r.error}catch(e){g.msgs=g.msgs.filter(x=>x!==tmp);toast(T3('Envoi impossible : ','Voye a pa mache : ','Could not send: ')+(e.message||e))}
+ await loadGroups();await gMarkRead(GROUPS.find(x=>x.id===g.id));render()}
+const svG=saveVoice;saveVoice=function(kind,target,url){if(kind!=='g')return svG(kind,target,url);const g=GROUPS.find(x=>x.id==target);if(g)gSend(g,{audio:url,_au:url})};
+// affichage du fil de groupe et du badge
+const rG=render;render=function(){rG();if(!SB||!READY)return;
+ const nb=document.querySelector("[data-nav='msg']");if(nb){const n=unreadM()+gUnread();let b=nb.querySelector('.bd');if(n){if(!b){nb.insertAdjacentHTML('beforeend',`<span class='bd'></span>`);b=nb.querySelector('.bd')}b.textContent=n}else if(b)b.remove()}
+ if(tab==='inbox'&&sub==='m'&&gv&&me!=='admin'){const g=GROUPS.find(x=>x.id===gv);const d=document.getElementById('inbox');if(!g||!d){gv=null;return}
+  const keep=document.getElementById('gi'),val=keep?keep.value:'';const head=d.querySelector('.sub2');d.innerHTML=(head?head.outerHTML:'')+groupThreadHtml(g);
+  const box=document.getElementById('gmsgs');if(box)box.scrollTop=box.scrollHeight;const gi=document.getElementById('gi');if(gi&&val)gi.value=val;
+  if(g.unread)gMarkRead(g);decorateOnline&&decorateOnline()}};
+// actions
+document.body.insertAdjacentHTML('beforeend',"<input type='file' id='fgatt' accept='image/*,video/*' hidden>");
+let GNEW=null;
+function gNewDlg(){const ML=meL(),dist=famDist(ML);const L2=P.filter(x=>x.id!==ML&&x.acc&&!x.dc&&!x.bn).sort((a,b)=>(dist[a.id]??99)-(dist[b.id]??99)||a.n.localeCompare(b.n));
+ odlg(`<b style='display:block;padding:6px 6px 8px'>👥 ${T3('Nouveau groupe','Nouvo gwoup','New group')}</b>
+ <input id='gname' maxlength='60' placeholder='${T3('Nom du groupe (ex. : Les enfants de Paul)','Non gwoup la (egz. : Pitit Paul yo)','Group name (e.g. Paul’s kids)')}' style='width:100%;font:inherit;padding:11px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--txt)'>
+ <div class='emo' style='margin:8px 0'>${['👥','🌳','🏠','🎉','⛪','🍲','⚽','🎓','💛'].map((e,i)=>`<button data-gemo='${e}' class='${i===0?'on':''}'>${e}</button>`).join('')}</div>
+ <div class='path'>${T3('Choisissez les membres :','Chwazi manm yo :','Choose members:')}</div>
+ <div class='gpick'>${L2.map(x=>`<label><input type='checkbox' value='${x.id}'>${av(x.id,30)}<span style='flex:1'><b>${x.n}</b> <span class='path'>${rel(ML,x.id).t||''}</span></span></label>`).join('')||`<div class='path' style='padding:12px'>${T3('Aucun autre membre inscrit pour le moment.','Pa gen lòt manm enskri pou kounye a.','No other registered member yet.')}</div>`}</div>
+ <div class='row' style='justify-content:flex-end;gap:8px'><button class='pill gh' data-oa='x'>${T3('Annuler','Anile','Cancel')}</button><button class='pill' data-gcreate='1'>${T3('Créer le groupe','Kreye gwoup la','Create group')}</button></div>`);GNEW={emoji:'👥'}}
+function gSetDlg(g){const ML=meL(),mgr=ISADM||g.by===ML;
+ odlg(`<b style='display:block;padding:6px 6px 8px'>${g.emoji} ${g.name}</b>
+ ${item('gmute',g.muted?'🔔':'🔕',g.muted?T3('Réactiver les notifications','Reaktive notifikasyon','Unmute'):T3('Mettre en sourdine','Mete an silans','Mute'))}
+ ${g.kind==='custom'&&mgr?item('grename','✏️',T3('Renommer le groupe','Chanje non gwoup la','Rename group'))+item('gadd','➕',T3('Ajouter des membres','Ajoute manm','Add members')):''}
+ ${g.kind==='custom'?`<div class='path' style='padding:8px 14px 2px'>${T3('Membres','Manm','Members')} (${g.members.length})</div>`+g.members.map(x=>`<div class='row' style='align-items:center;padding:4px 14px;gap:10px'>${av(x,28)}<span style='flex:1'>${by[x]?by[x].n:''}${x===g.by?` <span class='path'>· ${T3('créateur','kreyatè','creator')}</span>`:''}</span>${mgr&&x!==ML?`<button class='lk' data-grem='${x}'>${T3('Retirer','Retire','Remove')}</button>`:''}</div>`).join(''):''}
+ ${g.kind==='custom'?item('gleave','🚪',T3('Quitter le groupe','Kite gwoup la','Leave group'),1):''}
+ ${g.kind==='custom'&&mgr?item('gdelete','🗑',T3('Supprimer le groupe','Efase gwoup la','Delete group'),1):''}
+ ${item('x','✕',T3('Fermer','Fèmen','Close'))}`);OCUR=null;GNEW={set:g.id}}
+function gAddDlg(g){const ML=meL();const L2=P.filter(x=>x.acc&&!x.dc&&!x.bn&&!g.members.includes(x.id));
+ odlg(`<b style='display:block;padding:6px'>➕ ${T3('Ajouter au groupe','Ajoute nan gwoup la','Add to group')}</b><div class='gpick'>${L2.map(x=>`<label><input type='checkbox' value='${x.id}'>${av(x.id,30)}<b style='flex:1'>${x.n}</b></label>`).join('')||`<div class='path' style='padding:12px'>${T3('Tout le monde est déjà dans le groupe.','Tout moun deja nan gwoup la.','Everyone is already in the group.')}</div>`}</div><div class='row' style='justify-content:flex-end;gap:8px'><button class='pill gh' data-oa='x'>${T3('Annuler','Anile','Cancel')}</button><button class='pill' data-gaddok='${g.id}'>${T3('Ajouter','Ajoute','Add')}</button></div>`)}
+document.addEventListener('click',async e=>{if(!SB)return;const b=e.target.closest('[data-gopen],[data-gback],[data-gsend],[data-gatt],[data-gnew],[data-gemo],[data-gcreate],[data-gset],[data-gdel],[data-grem],[data-gaddok],[data-oa^="g"]');
+ if(!b){const m=e.target.closest('[data-mo],[data-sub]');if(m)gv=null;return}e.stopPropagation();e.preventDefault();const d=b.dataset,T=t=>SB.from(t);
+ if(d.gopen){gv=+d.gopen;tab='inbox';sub='m';mv=null;render();return}
+ if(d.gback){gv=null;render();return}
+ if(d.gsend){const g=GROUPS.find(x=>x.id==d.gsend),ta=document.getElementById('gi'),v=ta?ta.value.trim():'';if(!g||!v)return;ta.value='';gSend(g,{body:v});return}
+ if(d.gatt){document.getElementById('fgatt').click();return}
+ if(d.gnew){gNewDlg();return}
+ if(d.gemo){document.querySelectorAll('[data-gemo]').forEach(x=>x.classList.toggle('on',x===b));GNEW.emoji=d.gemo;return}
+ if(d.gcreate){const n=document.getElementById('gname').value.trim();if(!n)return toast(T3('Donnez un nom au groupe','Bay gwoup la yon non','Give the group a name'));
+  const ids=[...document.querySelectorAll('.gpick input:checked')].map(x=>D(x.value));b.disabled=true;
+  const r=await SB.rpc('create_group',{p_name:n,p_emoji:GNEW.emoji,p_members:ids});if(r.error){b.disabled=false;return toast(r.error.message)}
+  odlg(null);await loadGroups();gv=r.data;tab='inbox';sub='m';mv=null;render();toast(T3('Groupe créé 👥','Gwoup kreye 👥','Group created 👥'));return}
+ if(d.gset){const g=GROUPS.find(x=>x.id==d.gset);if(g)gSetDlg(g);return}
+ if(d.gdel){if(!confirm(T3('Supprimer ce message pour tout le groupe ?','Efase mesaj sa a pou tout gwoup la ?','Delete this message for the whole group?')))return;const g=GROUPS.find(x=>x.msgs.some(m=>m.id==d.gdel)),m=g&&g.msgs.find(x=>x.id==d.gdel);
+  const r=await T('group_messages').delete().eq('id',+d.gdel);if(r.error)return toast(r.error.message);if(m){const ps=[m.ap,m.ip,m.vp].filter(Boolean);if(ps.length)SB.storage.from('media').remove(ps).catch(()=>{})}await loadGroups();render();return}
+ const g=GNEW&&GNEW.set?GROUPS.find(x=>x.id===GNEW.set):null;
+ if(d.grem&&g){if(!confirm(T3('Retirer ce membre du groupe ?','Retire manm sa a nan gwoup la ?','Remove this member from the group?')))return;const r=await T('group_members').delete().match({group_id:g.id,member_id:D(d.grem)});if(r.error)return toast(r.error.message);await loadGroups();gSetDlg(GROUPS.find(x=>x.id===g.id));return}
+ if(d.gaddok){const ids=[...document.querySelectorAll('.gpick input:checked')].map(x=>({group_id:+d.gaddok,member_id:D(x.value)}));if(ids.length){const r=await T('group_members').insert(ids);if(r.error)return toast(r.error.message)}odlg(null);await loadGroups();render();toast(T3('Membres ajoutés','Manm ajoute','Members added'));return}
+ const a=d.oa;if(!g)return;
+ if(a==='gmute'){const v=!g.muted;let r;if(g.hasRow)r=await T('group_members').update({muted:v}).match({group_id:g.id,member_id:MYDB});else r=await T('group_members').insert({group_id:g.id,member_id:MYDB,muted:v});if(r.error)return toast(r.error.message);odlg(null);await loadGroups();render();toast(v?T3('🔕 Groupe en sourdine','🔕 Gwoup an silans','🔕 Group muted'):T3('🔔 Notifications réactivées','🔔 Notifikasyon reaktive','🔔 Unmuted'));return}
+ if(a==='grename'){const n=prompt(T3('Nouveau nom du groupe :','Nouvo non gwoup la :','New group name:'),unesc(g.name));if(!n||!n.trim())return;const r=await T('chat_groups').update({name:n.trim().slice(0,60)}).eq('id',g.id);if(r.error)return toast(r.error.message);odlg(null);await loadGroups();render();return}
+ if(a==='gadd'){gAddDlg(g);return}
+ if(a==='gleave'){if(!confirm(T3('Quitter ce groupe ?','Kite gwoup sa a ?','Leave this group?')))return;const r=await T('group_members').delete().match({group_id:g.id,member_id:MYDB});if(r.error)return toast(r.error.message);odlg(null);gv=null;await loadGroups();render();return}
+ if(a==='gdelete'){if(!confirm(T3('Supprimer définitivement ce groupe et tous ses messages ?','Efase gwoup sa a ak tout mesaj li yo nèt ?','Permanently delete this group and all its messages?')))return;const r=await T('chat_groups').delete().eq('id',g.id);if(r.error)return toast(r.error.message);odlg(null);gv=null;await loadGroups();render();return}},true);
+document.addEventListener('change',async e=>{const t=e.target;if(t.id!=='fgatt'||!t.files[0]||!gv)return;const f=t.files[0];t.value='';const g=GROUPS.find(x=>x.id===gv);if(!g)return;
+ const ta=document.getElementById('gi'),cap=ta?ta.value.trim():'';if(ta)ta.value='';
+ if(f.type.startsWith('video/')){if(f.size>MAXV)return tooBig();toast(T3('Envoi de la vidéo… gardez BoSane ouvert.','N ap voye videyo a… kite BoSane louvri.','Sending video… keep BoSane open.'));gSend(g,{body:cap,vfile:f,_vd:URL.createObjectURL(f)})}
+ else{const data=await loadImg(f,1280,false);gSend(g,{body:cap,imgData:data,_im:data})}});
+// ouverture depuis une notification ./?open=group:ID
+const otG=openTarget;openTarget=function(o){if(o&&o.startsWith('group:')){const id=+o.split(':')[1];const go=()=>{if(GROUPS.find(x=>x.id===id)){gv=id;tab='inbox';sub='m';mv=null;render()}};go();if(!gv)setTimeout(go,1500);return}otG(o)};
+// temps réel
+try{SB&&SB.channel('bosane-groups').on('postgres_changes',{event:'*',schema:'public',table:'group_messages'},()=>{clearTimeout(window.GRT);window.GRT=setTimeout(async()=>{if(typing())return;await loadGroups();render()},700)}).subscribe()}catch(e){}
+
+
+// ===== Sondages, calendrier, « Mon compte » =====
+let POLLS={},PREFS={off:[],muted_people:[]},PNEW=null;
+document.head.insertAdjacentHTML('beforeend',`<style>
+.poll{padding:4px 14px 10px}.pq{font-weight:700;margin:2px 0 8px}
+.po{position:relative;display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;font:inherit;color:var(--txt);background:color-mix(in srgb,var(--txt) 5%,transparent);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin:6px 0;overflow:hidden;cursor:pointer}
+.po .bar{position:absolute;inset:0 auto 0 0;background:color-mix(in srgb,var(--bl) 18%,transparent);z-index:0;transition:width .4s}
+.po span{position:relative;z-index:1}.po.mine{border-color:var(--bl)}.po.mine b{color:var(--bl)}.po[disabled]{cursor:default}
+.calm{font-weight:800;margin:14px 6px 6px;text-transform:capitalize}.cali{display:flex;gap:10px;align-items:center;padding:8px 6px;border-top:1px solid var(--line)}
+.cald{width:44px;text-align:center;flex:none;border-radius:10px;background:color-mix(in srgb,var(--bl) 10%,transparent);padding:4px 0;line-height:1.1}.cald b{display:block;font-size:1.15rem}.cald small{font-size:.66rem;text-transform:uppercase}
+.tg{display:flex;align-items:center;gap:10px;padding:10px 6px;border-top:1px solid var(--line)}.tg span{flex:1}.tg input{width:20px;height:20px}
+.acf{width:100%;font:inherit;padding:11px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--txt);margin:6px 0}
+.ach{font-weight:800;margin:16px 6px 4px}
+</style>`);
+async function loadExtras(){if(!SB||!MYDB&&!ISADM)return;
+ try{const ids=posts.filter(p=>p.dbid&&!p.sys).map(p=>p.dbid);POLLS={};
+  if(ids.length){const o=await SB.from('poll_options').select('*').in('post_id',ids);
+   if(!o.error&&o.data.length){const pids=[...new Set(o.data.map(x=>x.post_id))];const v=await SB.from('poll_votes').select('*').in('post_id',pids);
+    o.data.sort((a,b)=>a.pos-b.pos).forEach(x=>{(POLLS[x.post_id]=POLLS[x.post_id]||{opts:[],votes:{}}).opts.push({id:x.id,l:esc(x.label)})});
+    (v.data||[]).forEach(x=>{if(POLLS[x.post_id])POLLS[x.post_id].votes[L(x.member_id)]=x.option_id})}}}catch(e){}
+ try{const s=await SB.auth.getSession(),u=s.data.session&&s.data.session.user;if(u){window.MYEMAIL=u.email||'';const r=await SB.from('notif_prefs').select('*').eq('user_id',u.id);PREFS=(r.data&&r.data[0])||{off:[],muted_people:[]};PREFS.uid=u.id}}catch(e){}}
+const rlX=reload;reload=async function(){await rlX.apply(this,arguments);if(READY){await loadExtras();INTERNAL=true;try{render()}finally{INTERNAL=false}}};
+// --- sondage dans une publication
+function pollHtml(p){const S=POLLS[p.dbid];if(!S)return '';const ML=meL(),tot=Object.keys(S.votes).length,mine=S.votes[ML],can=me!=='admin'&&!p.cl;
+ return `<div class='poll'>${S.opts.map(o=>{const n=Object.values(S.votes).filter(v=>v===o.id).length,pc=tot?Math.round(n*100/tot):0;
+  return `<button class='po${mine===o.id?' mine':''}' data-pvote='${o.id}' data-ppost='${p.dbid}'${can?'':' disabled'}><i class='bar' style='width:${mine||!can?pc:0}%'></i><span>${mine===o.id?'✓ ':''}<b>${o.l}</b></span><span class='path'>${mine||!can?`${pc} % · ${n}`:''}</span></button>`}).join('')}
+ <div class='path'>📊 ${tot} ${tot>1?T3('votes','vòt','votes'):T3('vote','vòt','vote')}${p.cl?' · '+T3('sondage clos','sondaj fèmen','poll closed'):mine?' · '+T3('touchez une autre réponse pour changer','peze yon lòt repons pou chanje','tap another answer to change'):' · '+T3('touchez une réponse pour voter','peze yon repons pou vote','tap an answer to vote')}</div></div>`}
+const phP=postHtml;postHtml=function(p){let x=phP(p);if(!p.dbid||!POLLS[p.dbid])return x;const h=pollHtml(p);
+ return x.includes("<div class='fb'")?x.replace(/(<div class='fb'[^>]*>[\s\S]*?<\/div>)/,m=>m+h):x+h};
+function pollDlg(){PNEW={n:2};const row=i=>`<input class='acf popt' maxlength='80' placeholder='${T3('Réponse','Repons','Option')} ${i+1}'>`;
+ odlg(`<b style='display:block;padding:6px'>📊 ${T3('Nouveau sondage','Nouvo sondaj','New poll')}</b>
+ <textarea id='pq' class='acf' rows='2' maxlength='300' placeholder='${T3('Votre question (ex. : Quelle date pour la réunion ?)','Kesyon ou (egz. : Ki dat pou reyinyon an ?)','Your question (e.g. Which date for the reunion?)')}'></textarea>
+ <div id='popts'>${row(0)+row(1)}</div><button class='lk' data-padd='1' style='margin:4px 6px'>＋ ${T3('Ajouter une réponse','Ajoute yon repons','Add an option')}</button>
+ <div class='row' style='justify-content:flex-end;gap:8px;margin-top:8px'><button class='pill gh' data-oa='x'>${T3('Annuler','Anile','Cancel')}</button><button class='pill' data-pcreate='1'>${T3('Publier le sondage','Pibliye sondaj la','Post poll')}</button></div>`)}
+// --- calendrier
+async function calDlg(){const today=new Date();today.setHours(0,0,0,0);const items=[];
+ P.filter(p=>BD[p.id]&&!p.dc&&!(p.bn)).forEach(p=>{const b=BD[p.id];let d=new Date(today.getFullYear(),b.getMonth(),b.getDate());if(d<today)d=new Date(today.getFullYear()+1,b.getMonth(),b.getDate());
+  items.push({d,ic:'🎂',t:`${by[p.id].n}`,s:T3(`${d.getFullYear()-b.getFullYear()} ans`,`${d.getFullYear()-b.getFullYear()} an`,`turns ${d.getFullYear()-b.getFullYear()}`),go:'profile:'+p.id})});
+ try{const iso=today.toISOString().slice(0,10);const r=await SB.from('posts').select('id,event_title,event_date,event_place').eq('kind','event').gt('event_date',new Date(today.getTime()-864e5).toISOString().slice(0,10));
+  (r.data||[]).forEach(e=>{if(!e.event_date)return;const [y,m,dd]=e.event_date.split('-').map(Number);items.push({d:new Date(y,m-1,dd),ic:'📅',t:esc(e.event_title||T3('Événement familial','Evènman fanmi','Family event')),s:esc(e.event_place||''),go:'post:'+e.id})})}catch(e){}
+ items.sort((a,b)=>a.d-b.d);const loc=lang==='en'?'en-US':'fr-FR';let cur='',h='';
+ items.filter(i=>i.d-today<366*864e5).forEach(i=>{const mk=i.d.toLocaleDateString(loc,{month:'long',year:'numeric'});if(mk!==cur){cur=mk;h+=`<div class='calm'>${mk}</div>`}
+  const dd=Math.round((i.d-today)/864e5);h+=`<div class='cali' data-calgo='${i.go}' style='cursor:pointer'><div class='cald'><b>${i.d.getDate()}</b><small>${i.d.toLocaleDateString(loc,{weekday:'short'})}</small></div><div style='flex:1;min-width:0'><b>${i.ic} ${i.t}</b><div class='path'>${[i.s,dd===0?T3("aujourd’hui","jodi a","today"):dd===1?T3('demain','demen','tomorrow'):T3(`dans ${dd} jours`,`nan ${dd} jou`,`in ${dd} days`)].filter(Boolean).join(' · ')}</div></div></div>`});
+ odlg(`<b style='display:block;padding:6px'>📅 ${T3('Calendrier de la famille','Kalandriye fanmi an','Family calendar')}</b><div class='path' style='padding:0 6px'>${T3('Anniversaires et événements des 12 prochains mois. Rappel envoyé la veille de chaque événement.','Fèt ak evènman 12 pwochen mwa yo. Yon rapèl ap vini lavèy chak evènman.','Birthdays and events for the next 12 months. A reminder is sent the day before each event.')}</div>
+ <div style='max-height:62vh;overflow-y:auto'>${h||`<div class='path' style='padding:16px 6px'>${T3('Rien de prévu pour le moment. Ajoutez votre date de naissance dans votre profil 🎂','Pa gen anyen pou kounye a. Ajoute dat nesans ou nan pwofil ou 🎂','Nothing planned yet. Add your birthday in your profile 🎂')}</div>`}</div>
+ <div class='row' style='justify-content:flex-end;margin-top:8px'><button class='pill gh' data-oa='x'>${T3('Fermer','Fèmen','Close')}</button></div>`)}
+// --- mon compte
+const CATS=()=>[['messages','💬',T3('Messages privés','Mesaj prive','Private messages')],['groups','👥',T3('Groupes','Gwoup','Groups')],['comments','🗨',T3('Commentaires, réponses et mentions','Kòmantè, repons ak mansyon','Comments, replies and mentions')],['reactions','❤️',T3('Réactions','Reyaksyon','Reactions')],['family','🌳',T3('Publications et stories de mes proches','Piblikasyon ak istwa fanmi pwòch mwen','Posts and stories from close family')],['announcements','📣',T3('Annonces, anniversaires, événements','Anons, fèt, evènman','Announcements, birthdays, events')]].concat(ISADM?[['admin','👑',T3('Administration (demandes, signalements)','Administrasyon (demann, siyalman)','Admin (requests, reports)')]]:[]);
+async function savePrefs(patch){Object.assign(PREFS,patch);if(!PREFS.uid)return;const r=await SB.from('notif_prefs').upsert({user_id:PREFS.uid,off:PREFS.off||[],muted_people:PREFS.muted_people||[],updated_at:new Date().toISOString()},{onConflict:'user_id'});if(r.error)toast(r.error.message)}
+function acctDlg(){const off=PREFS.off||[],mp=(PREFS.muted_people||[]).map(L).filter(x=>by[x]);
+ odlg(`<b style='display:block;padding:6px'>⚙️ ${T3('Mon compte','Kont mwen','My account')}</b>
+ <div class='ach'>✉️ ${T3('Adresse e-mail','Adrès imèl','Email address')}</div>
+ <div class='path' style='padding:0 6px'>${T3('Actuelle :','Kounye a :','Current:')} <b>${esc(window.MYEMAIL||'—')}</b></div>
+ <div class='row' style='gap:6px;align-items:center'><input id='nemail' type='email' class='acf' placeholder='${T3('Nouvelle adresse e-mail','Nouvo adrès imèl','New email address')}' style='flex:1'><button class='pill' data-acmail='1'>${T3('Changer','Chanje','Change')}</button></div>
+ <div class='ach'>🔔 ${T3('Notifications sur le téléphone','Notifikasyon sou telefòn nan','Phone notifications')}</div>
+ ${CATS().map(([k,ic,l])=>`<label class='tg'><span>${ic} ${l}</span><input type='checkbox' data-accat='${k}'${off.includes(k)?'':' checked'}></label>`).join('')}
+ ${mp.length?`<div class='ach'>🔕 ${T3('Personnes en sourdine','Moun an silans','Muted people')}</div>`+mp.map(x=>`<div class='tg'>${av(x,28)}<span>${by[x].n}</span><button class='lk' data-acunmute='${x}'>${T3('Réactiver','Reaktive','Unmute')}</button></div>`).join(''):''}
+ ${me!=='admin'||!ISADM?`<div class='ach' style='color:#c0392b'>⚠️ ${T3('Zone sensible','Zòn sansib','Danger zone')}</div><button class='oi dg' data-acdel='1'><span style='font-size:1.2rem'>🗑</span>${T3('Supprimer mon compte','Efase kont mwen','Delete my account')}</button>`:''}
+ <div class='row' style='justify-content:flex-end;margin-top:8px'><button class='pill gh' data-oa='x'>${T3('Fermer','Fèmen','Close')}</button></div>`)}
+function delDlg(){const w=T3('SUPPRIMER','EFASE','DELETE');
+ odlg(`<b style='display:block;padding:6px;color:#c0392b'>🗑 ${T3('Supprimer mon compte','Efase kont mwen','Delete my account')}</b>
+ <div style='padding:0 6px;line-height:1.5'>${T3('Seront effacés définitivement : vos publications, commentaires, messages privés et de groupe, réactions, stories, photos et vidéos.<br>Votre place dans l’arbre reste (sans photo ni bio), pour ne pas casser les liens de la famille. Vous pourrez revenir plus tard avec une nouvelle invitation.','Tout sa yo ap efase nèt : piblikasyon ou, kòmantè, mesaj prive ak gwoup, reyaksyon, istwa, foto ak videyo.<br>Plas ou nan pyebwa a ap rete (san foto ni bio). Ou ka retounen pita ak yon nouvo envitasyon.','Permanently deleted: your posts, comments, private and group messages, reactions, stories, photos and videos.<br>Your place in the tree stays (without photo or bio) so family links are not broken. You can come back later with a new invitation.')}</div>
+ <div class='path' style='padding:10px 6px 0'>${T3(`Pour confirmer, écrivez ${w} :`,`Pou konfime, ekri ${w} :`,`To confirm, type ${w}:`)}</div><input id='delw' class='acf' autocomplete='off'>
+ <div class='row' style='justify-content:flex-end;gap:8px;margin-top:8px'><button class='pill gh' data-oa='x'>${T3('Annuler','Anile','Cancel')}</button><button class='pill' data-acdelok='${w}' style='background:#c0392b'>${T3('Supprimer définitivement','Efase nèt','Delete permanently')}</button></div>`)}
+// menu ☰
+const rmA=renderMenu;renderMenu=function(){rmA();if(mnuS!=='menu'||!SB||!READY)return;const dy=document.getElementById('mdyn');if(!dy||dy.querySelector('[data-acct]'))return;
+ const it=(k,ic,l)=>`<button class='mi2' data-${k}='1'><span style='font-size:1.25rem;width:22px;text-align:center'>${ic}</span><span>${l}</span></button>`;
+ dy.insertAdjacentHTML('afterbegin',it('cal','📅',T3('Calendrier de la famille','Kalandriye fanmi an','Family calendar'))+it('acct','⚙️',T3('Mon compte','Kont mwen','My account')))};
+// boutons ajoutés à l'affichage : 📊 dans la zone de publication, 🔕 dans une conversation privée
+const rA=render;render=function(){rA();if(!SB||!READY||me==='admin')return;
+ document.querySelectorAll('#feed .comp [data-vpick]').forEach(v=>{if(!v.parentElement.querySelector('[data-pollnew]'))v.insertAdjacentHTML('afterend',`<button class='ib camg' data-pollnew='1' aria-label='${T3('Créer un sondage','Kreye yon sondaj','Create a poll')}' style='font-size:1.2rem'>📊</button>`)});
+ const mb=document.querySelector('[data-mback]');if(mb&&mv&&by[mv]&&!mb.parentElement.querySelector('[data-pmute]')){const on=(PREFS.muted_people||[]).map(L).includes(mv);
+  mb.parentElement.insertAdjacentHTML('beforeend',`<button class='ib' data-pmute='${mv}' style='margin-left:auto;font-size:1.1rem' aria-label='${on?T3('Réactiver les notifications','Reaktive notifikasyon','Unmute'):T3('Mettre en sourdine','Mete an silans','Mute')}' title='${on?T3('En sourdine — toucher pour réactiver','An silans — peze pou reaktive','Muted — tap to unmute'):T3('Mettre en sourdine','Mete an silans','Mute')}'>${on?'🔕':'🔔'}</button>`)}};
+document.addEventListener('change',async e=>{const t=e.target;if(!t.dataset||!t.dataset.accat)return;const k=t.dataset.accat,off=new Set(PREFS.off||[]);t.checked?off.delete(k):off.add(k);await savePrefs({off:[...off]})});
+document.addEventListener('click',async e=>{if(!SB)return;const b=e.target.closest('[data-pvote],[data-pollnew],[data-padd],[data-pcreate],[data-cal],[data-calgo],[data-acct],[data-acmail],[data-acunmute],[data-acdel],[data-acdelok],[data-pmute]');if(!b)return;e.stopPropagation();e.preventDefault();const d=b.dataset;
+ if(d.cal||d.acct){mnuS=null;renderMenu();if(d.cal)calDlg();else acctDlg();return}
+ if(d.calgo){odlg(null);openTarget(d.calgo);return}
+ if(d.pvote){if(me==='admin'||!MYDB)return;const pid=+d.ppost,oid=+d.pvote,S=POLLS[pid];if(!S)return;S.votes[meL()]=oid;render();
+  const r=await SB.from('poll_votes').upsert({post_id:pid,member_id:MYDB,option_id:oid,created_at:new Date().toISOString()},{onConflict:'post_id,member_id'});if(r.error){toast(r.error.message);kickSync(0,true)}return}
+ if(d.pollnew){pollDlg();return}
+ if(d.padd){const box=document.getElementById('popts');if(box.children.length>=6)return toast(T3('6 réponses au maximum','6 repons maksimòm','6 options max'));box.insertAdjacentHTML('beforeend',`<input class='acf popt' maxlength='80' placeholder='${T3('Réponse','Repons','Option')} ${box.children.length+1}'>`);box.lastElementChild.focus();return}
+ if(d.pcreate){const q=document.getElementById('pq').value.trim(),opts=[...document.querySelectorAll('.popt')].map(x=>x.value.trim()).filter(Boolean);
+  if(!q)return toast(T3('Écrivez la question','Ekri kesyon an','Write the question'));if(opts.length<2)return toast(T3('Il faut au moins 2 réponses','Fò gen omwen 2 repons','At least 2 options needed'));b.disabled=true;
+  const r=await SB.from('posts').insert({kind:'poll',author_id:MYDB,body:q}).select('id').single();if(r.error){b.disabled=false;return toast(r.error.message)}
+  const r2=await SB.from('poll_options').insert(opts.map((l,i)=>({post_id:r.data.id,label:l,pos:i})));if(r2.error){await SB.from('posts').delete().eq('id',r.data.id);b.disabled=false;return toast(r2.error.message)}
+  odlg(null);toast(T3('📊 Sondage publié','📊 Sondaj pibliye','📊 Poll posted'));tab='feed';kickSync(0,true);return}
+ if(d.acmail){const v=document.getElementById('nemail').value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v))return toast(T3('Adresse e-mail invalide','Adrès imèl la pa bon','Invalid email address'));b.disabled=true;
+  const r=await SB.auth.updateUser({email:v});b.disabled=false;if(r.error)return toast(r.error.message);odlg(null);
+  toast(T3('📩 Vérifiez vos e-mails : un lien de confirmation a été envoyé à l’ancienne et à la nouvelle adresse.','📩 Gade imèl ou : yon lyen konfimasyon voye nan ansyen ak nouvo adrès la.','📩 Check your email: a confirmation link was sent to the old and new addresses.'));return}
+ if(d.acunmute){await savePrefs({muted_people:(PREFS.muted_people||[]).filter(x=>L(x)!==d.acunmute)});acctDlg();return}
+ if(d.pmute){const id=D(d.pmute),cur=PREFS.muted_people||[],on=cur.includes(id);await savePrefs({muted_people:on?cur.filter(x=>x!==id):[...cur,id]});render();
+  toast(on?T3('🔔 Notifications réactivées pour ','🔔 Notifikasyon reaktive pou ','🔔 Notifications back on for ')+by[d.pmute].n:T3('🔕 Vous ne recevrez plus de notifications de ','🔕 Ou p ap resevwa notifikasyon ','🔕 No more notifications from ')+by[d.pmute].n);return}
+ if(d.acdel){delDlg();return}
+ if(d.acdelok){if(document.getElementById('delw').value.trim().toUpperCase()!==d.acdelok)return toast(T3('Écrivez le mot demandé pour confirmer','Ekri mo yo mande a pou konfime','Type the requested word to confirm'));b.disabled=true;b.textContent='…';
+  try{const uid=PREFS.uid;if(uid){let all=[];for(let off=0;;off+=1000){const l=await SB.storage.from('media').list(uid,{limit:1000,offset:off});if(l.error||!l.data||!l.data.length)break;all=all.concat(l.data.map(f=>uid+'/'+f.name));if(l.data.length<1000)break}
+    for(let i=0;i<all.length;i+=100)await SB.storage.from('media').remove(all.slice(i,i+100))}}catch(_){}
+  const r=await SB.rpc('delete_my_account');if(r.error){b.disabled=false;b.textContent=T3('Supprimer définitivement','Efase nèt','Delete permanently');return toast(r.error.message)}
+  try{const rg=await navigator.serviceWorker.getRegistration(),sb=rg&&await rg.pushManager.getSubscription();if(sb)await sb.unsubscribe()}catch(_){}try{await SB.auth.signOut()}catch(_){}odlg(null);alert(T3('Votre compte a été supprimé. Merci d’avoir fait partie de BoSane 💛','Kont ou efase. Mèsi paske w te fè pati BoSane 💛','Your account has been deleted. Thank you for being part of BoSane 💛'));location.reload();return}},true);
 
 BOOT().finally(hideSplash);setTimeout(hideSplash,7000);
 const wr0=document.querySelector('.wrap');if(wr0)wr0.scrollLeft=(wr0.scrollWidth-wr0.clientWidth)/2;

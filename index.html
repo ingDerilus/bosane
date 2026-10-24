@@ -1739,6 +1739,8 @@ ${custom?`\n💬 « ${custom} »\n`:''}
 
 C’est simple : entre ton adresse e-mail, touche le lien que tu recevras, et ta place dans l’arbre t’attend.
 
+🔔 Pense à *activer les notifications* pour ne rien manquer de la famille.
+
 À très vite parmi nous ! 🤗`,
 ht:`🌳 Bonjou ${N} !
 
@@ -1751,6 +1753,8 @@ ${custom?`\n💬 « ${custom} »\n`:''}
 
 Li fasil : mete adrès imèl ou, peze lyen w ap resevwa a, epi plas ou nan pyebwa a ap tann ou.
 
+🔔 Pa bliye *aktive notifikasyon* pou w pa rate anyen nan fanmi an.
+
 N ap tann ou ! 🤗`,
 en:`🌳 Hi ${N}!
 
@@ -1762,6 +1766,8 @@ ${custom?`\n💬 “${custom}”\n`:''}
 🔑 Your code: *${code}*
 
 It’s easy: enter your email, tap the link you receive, and your place in the family tree is waiting.
+
+🔔 Remember to *turn on notifications* so you don’t miss anything.
 
 See you soon! 🤗`}[L2];
 return msg}
@@ -2013,6 +2019,27 @@ const rmPush=renderMenu;renderMenu=function(){rmPush();if(mnuS!=='menu'||!SB||!R
  dy.insertAdjacentHTML('afterbegin',`<button class='mi2' data-push='${on?'off':'on'}'><span style='font-size:1.3rem;width:22px;text-align:center'>${on?'🔔':'🔕'}</span><span>${on?T3('Notifications : activées','Notifikasyon : aktive','Notifications: on'):T3('Activer les notifications','Aktive notifikasyon','Turn on notifications')}</span></button>`)};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-push]');if(!b||!SB)return;e.stopPropagation();e.preventDefault();const a=b.dataset.push;mnuS=null;renderMenu();
  if(a==='on')pushEnable();else if(a==='off')pushDisable();else if(a==='later'){pushHide=true;try{sessionStorage.setItem('bosane-push-later','1')}catch(_){}render()}},true);
+
+
+// ===== Fenêtre d'accueil : activer les notifications =====
+const ONBK=()=>'bosane-onb-'+(UID||'');
+let onbShown=false;
+function onbCheck(){if(onbShown||!READY||!MYDB||me==='admin'||PUSHON)return;
+ let done=false;try{done=localStorage.getItem(ONBK())==='1'}catch(e){}if(done)return;
+ const canPush=PUSH_OK&&Notification.permission==='default',iosHint=!PUSH_OK&&isIOS&&!STANDALONE;if(!canPush&&!iosHint)return;
+ if(svs||sed||cs!=null||document.getElementById('odlg')||document.getElementById('invdlg'))return;
+ onbShown=true;const n=by[me]?by[me].n:'';
+ document.body.insertAdjacentHTML('beforeend',`<div id='onb' style='position:fixed;inset:0;z-index:180;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px'><div class='uc' style='background:var(--card);border-radius:20px;padding:24px 20px;max-width:380px;width:100%;text-align:center;animation:pop .4s ease-out'>
+ <div style='font-size:3rem;line-height:1'>🔔</div>
+ <h2 style='margin:10px 0 6px;font-size:1.25rem'>${T3(`Bienvenue ${n} !`,`Byenveni ${n} !`,`Welcome ${n}!`)}</h2>
+ <p style='margin:0 0 14px;color:var(--mut);line-height:1.5'>${T3('Activez les notifications pour savoir quand la famille vous écrit, commente vos publications, ou fête un anniversaire.','Aktive notifikasyon pou w konnen lè fanmi an ekri w, fè kòmantè sou piblikasyon w, oswa fete yon anivèsè.','Turn on notifications to know when family writes to you, comments on your posts, or celebrates a birthday.')}</p>
+ <div style='text-align:left;line-height:1.9;margin:0 0 16px;font-size:.95rem'>💬 ${T3('Messages privés','Mesaj prive','Private messages')}<br>🗨 ${T3('Commentaires et réponses','Kòmantè ak repons','Comments and replies')}<br>🎂 ${T3('Anniversaires et événements','Anivèsè ak evènman','Birthdays and events')}<br>🎉 ${T3('Nouveaux membres de la famille','Nouvo manm fanmi an','New family members')}</div>
+ ${iosHint?`<div class='path' style='margin-bottom:14px'>📲 ${T3('Sur iPhone : touchez Partager ⬆️ puis « Sur l’écran d’accueil », ouvrez BoSane depuis l’icône, puis activez les notifications.','Sou iPhone : peze Pataje ⬆️ epi « Sou ekran lakay », louvri BoSane sou ikòn nan, epi aktive notifikasyon.','On iPhone: tap Share ⬆️ then “Add to Home Screen”, open BoSane from the icon, then turn on notifications.')}</div>`:`<button class='pill' data-onb='on' style='width:100%;padding:13px;font-size:1.05rem'>🔔 ${T3('Activer les notifications','Aktive notifikasyon','Turn on notifications')}</button>`}
+ <button class='lk' data-onb='later' style='margin-top:12px'>${T3('Plus tard','Pita','Later')}</button></div></div>`)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-onb]');if(!b)return;e.stopPropagation();e.preventDefault();
+ try{localStorage.setItem(ONBK(),'1')}catch(_){}const o=document.getElementById('onb');if(o)o.remove();
+ if(b.dataset.onb==='on')pushEnable()},true);
+const rOnb=render;render=function(){rOnb();if(SB&&READY)setTimeout(onbCheck,1200)};
 
 BOOT().finally(hideSplash);setTimeout(hideSplash,7000);
 const wr0=document.querySelector('.wrap');if(wr0)wr0.scrollLeft=(wr0.scrollWidth-wr0.clientWidth)/2;

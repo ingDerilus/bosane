@@ -1407,7 +1407,7 @@ if(id==='aclaimbtn'){const v=document.getElementById('aclaim').value.trim();if(!
   MYDB=data;me=L(MYDB);FIRST=true;await reload(true);document.getElementById('auth').classList.add('hide');toast(T3('Bienvenue dans la famille 🎉','Byenveni nan fanmi an 🎉','Welcome to the family 🎉'))}});
 document.getElementById('auth').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const b=document.querySelector('#abody .pill');if(b)b.click()});
 
-async function LOGOUT(){try{await SB.auth.signOut()}catch(e){}location.reload()}
+async function LOGOUT(){try{if('serviceWorker' in navigator&&'PushManager' in window){const r=await navigator.serviceWorker.getRegistration();const s=r&&await r.pushManager.getSubscription();if(s)await SB.rpc('drop_push',{p_endpoint:s.endpoint})}}catch(e){}try{await SB.auth.signOut()}catch(e){}location.reload()}
 let INLOGIN=false,LASTERR='';
 window.addEventListener('error',e=>{LASTERR=String(e.message||e.error||'')});window.addEventListener('unhandledrejection',e=>{LASTERR=String((e.reason&&(e.reason.message||e.reason))||'')});
 async function afterLogin(user){if(!user)return authScreen('email');if(INLOGIN||READY)return;INLOGIN=true;try{await afterLogin0(user)}catch(e){LASTERR=String(e&&e.message||e);authScreen('stuck')}finally{INLOGIN=false}}
@@ -1979,7 +1979,7 @@ const PUSH_OK=('serviceWorker' in navigator)&&('PushManager' in window)&&('Notif
 let PUSHON=false,pushHide=false;try{pushHide=sessionStorage.getItem('bosane-push-later')==='1'}catch(e){}
 const ub64=s=>{s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Uint8Array.from(atob(s),c=>c.charCodeAt(0))};
 async function pushSub(){if(!PUSH_OK)return null;const r=await navigator.serviceWorker.ready;return r.pushManager.getSubscription()}
-async function pushSave(sub){const j=sub.toJSON();try{await SB.from('push_subs').upsert({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,lang},{onConflict:'endpoint'})}catch(e){}}
+async function pushSave(sub){const j=sub.toJSON();const r=await SB.rpc('save_push',{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_lang:lang});if(r.error)throw r.error}
 async function pushEnable(){
  if(!PUSH_OK){toast(isIOS&&!STANDALONE?T3('Sur iPhone, installez d’abord BoSane sur l’écran d’accueil (Partager ⬆️ → Sur l’écran d’accueil).','Sou iPhone, enstale BoSane sou ekran lakay ou anvan (Pataje ⬆️ → Sou ekran lakay).','On iPhone, first add BoSane to your home screen (Share ⬆️ → Add to Home Screen).'):T3('Ce navigateur ne gère pas les notifications.','Navigatè sa a pa sipòte notifikasyon.','This browser does not support notifications.'));return}
  const p=await Notification.requestPermission();
@@ -1987,8 +1987,8 @@ async function pushEnable(){
  try{const r=await navigator.serviceWorker.ready;let s=await r.pushManager.getSubscription();if(!s)s=await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:ub64(VAPID_PUB)});
   await pushSave(s);PUSHON=true;toast(T3('🔔 Notifications activées','🔔 Notifikasyon aktive','🔔 Notifications on'))}
  catch(e){toast(T3('Activation impossible : ','Aktivasyon pa mache : ','Could not enable: ')+(e.message||e))}render()}
-async function pushDisable(){try{const s=await pushSub();if(s){await SB.from('push_subs').delete().eq('endpoint',s.endpoint);await s.unsubscribe()}}catch(e){}PUSHON=false;toast(T3('🔕 Notifications désactivées','🔕 Notifikasyon dezaktive','🔕 Notifications off'));render()}
-async function pushSync(){if(!PUSH_OK||Notification.permission!=='granted')return;try{const s=await pushSub();if(s){PUSHON=true;await pushSave(s)}}catch(e){}if(READY)render()}
+async function pushDisable(){try{const s=await pushSub();if(s){await SB.rpc('drop_push',{p_endpoint:s.endpoint});await s.unsubscribe()}}catch(e){}PUSHON=false;toast(T3('🔕 Notifications désactivées','🔕 Notifikasyon dezaktive','🔕 Notifications off'));render()}
+async function pushSync(){if(!PUSH_OK||Notification.permission!=='granted')return;try{const s=await pushSub();if(s){await pushSave(s);PUSHON=true}}catch(e){PUSHON=false}if(READY)render()}
 
 // ouverture au bon endroit depuis une notification
 let OPEN0=null;(function(){const o=new URLSearchParams(location.search).get('open');if(o){OPEN0=o;history.replaceState(null,'',location.pathname+location.hash)}})();

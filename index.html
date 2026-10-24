@@ -1460,7 +1460,7 @@ const blood0=i=>by[i]&&(by[i].par||i==='jo')?1:0;
 P.forEach(p=>{if(p.par&&p.par.length>1)p.par.sort((a,b)=>blood0(b)-blood0(a))});
 const now=Date.now(),hh=t=>Math.max(0,Math.floor((now-Date.parse(t))/HR)),P2=new Map();
 posts.length=0;
-po.filter(r=>!pendDel.has('p'+r.id)).forEach(r=>{const p={id:r.id,dbid:r.id,a:r.author_id?L(r.author_id):'admin',h:hh(r.created_at),ts:Date.parse(r.created_at),t:esc(r.body||''),img:U(r.image_path),au:U(r.audio_path),ip:r.image_path,ap:r.audio_path,ed:!!r.edited_at,mem:L(r.memorial_of),l:[],r:{},c:[],cl:r.closed?1:0,rb:[],o:0,rv:{}};
+po.filter(r=>!pendDel.has('p'+r.id)).forEach(r=>{const p={id:r.id,dbid:r.id,a:r.author_id?L(r.author_id):'admin',h:hh(r.created_at),ts:Date.parse(r.created_at),t:esc(r.body||''),img:U(r.image_path),au:U(r.audio_path),ip:r.image_path,ap:r.audio_path,ed:!!r.edited_at,pin:r.pinned_until?Date.parse(r.pinned_until):0,mem:L(r.memorial_of),l:[],r:{},c:[],cl:r.closed?1:0,rb:[],o:0,rv:{}};
 if(r.kind==='welcome')p.sys={k:'welcome',id:L(r.subject_id)};
 if(r.kind==='birthday')p.sys={k:'birthday',id:L(r.subject_id)};
 if(r.kind==='memorial')p.sys={k:'memorial',id:L(r.subject_id)};
@@ -2040,6 +2040,55 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-onb]');if(
  try{localStorage.setItem(ONBK(),'1')}catch(_){}const o=document.getElementById('onb');if(o)o.remove();
  if(b.dataset.onb==='on')pushEnable()},true);
 const rOnb=render;render=function(){rOnb();if(SB&&READY)setTimeout(onbCheck,1200)};
+
+
+// ===== Liste de la famille, membres en ligne, publications épinglées =====
+document.head.insertAdjacentHTML('beforeend',`<style>
+.av{position:relative}
+.av.on::after{content:'';position:absolute;right:-2px;bottom:-2px;width:30%;height:30%;min-width:10px;min-height:10px;background:#31a24c;border:2px solid var(--card);border-radius:50%}
+.famh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.onl{color:#31a24c;font-weight:600;font-size:.8rem}
+.wbtn{flex:none;align-self:center;border:0;background:color-mix(in srgb,var(--bl) 12%,transparent);color:var(--bl);border-radius:20px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+.pinb{display:flex;align-items:center;gap:6px;padding:8px 14px 0;color:#b26a00;font-size:.82rem;font-weight:700}
+.fp.pinned{box-shadow:0 0 0 2px #f0a93b inset}
+</style>`);
+// --- présence en ligne (Supabase Realtime) ---
+let ONLINE=new Set(),presCh=null;
+function decorateOnline(){document.querySelectorAll('.av[data-goto],.av[data-av]').forEach(a=>{const id=a.dataset.goto||a.dataset.av;a.classList.toggle('on',!!id&&id!==meL()&&ONLINE.has(D(id)))});
+ const c=document.getElementById('onlc');if(c){const n=P.filter(x=>x.id!==meL()&&ONLINE.has(D(x.id))).length;c.textContent=n?T3(`🟢 ${n} en ligne`,`🟢 ${n} sou liy`,`🟢 ${n} online`):''}}
+function startPresence(){if(presCh||!SB||!MYDB)return;try{
+ presCh=SB.channel('bosane-online',{config:{presence:{key:MYDB}}});
+ presCh.on('presence',{event:'sync'},()=>{ONLINE=new Set(Object.keys(presCh.presenceState()));const m=document.getElementById('mlist');if(m&&tab==='inbox'&&sub==='m'&&!mv&&!(document.activeElement&&document.activeElement.id==='msq'))m.innerHTML=mlistHtml();decorateOnline()})
+  .subscribe(async st=>{if(st==='SUBSCRIBED'){try{await presCh.track({at:Date.now()})}catch(_){}}})}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(!presCh)return;try{document.hidden?presCh.untrack():presCh.track({at:Date.now()})}catch(_){}});
+
+// --- proximité familiale (nombre de liens dans l'arbre) ---
+function famDist(from){const adj={};const add=(a,b)=>{if(!by[a]||!by[b])return;(adj[a]=adj[a]||[]).push(b);(adj[b]=adj[b]||[]).push(a)};
+ P.forEach(p=>{(p.par||[]).forEach(q=>add(p.id,q));if(p.sp)add(p.id,p.sp);(p.ex||[]).forEach(q=>add(p.id,q))});
+ const d={[from]:0},q=[from];while(q.length){const x=q.shift();(adj[x]||[]).forEach(y=>{if(d[y]==null){d[y]=d[x]+1;q.push(y)}})}return d}
+function familyCard(){const ML=meL();const dist=ML?famDist(ML):{};
+ const L=P.filter(x=>x.id!==ML&&!x.dc&&(!x.bn||ISADM)).sort((a,b)=>{const oa=ONLINE.has(D(a.id))?0:1,ob=ONLINE.has(D(b.id))?0:1;const da=dist[a.id]??99,db2=dist[b.id]??99;return da-db2||oa-ob||a.n.localeCompare(b.n)});
+ if(!L.length)return '';
+ return card(`<div class='famh'><b>👨‍👩‍👧‍👦 ${T3('La famille','Fanmi an','The family')} <span class='path' style='font-weight:400'>· ${L.length}</span></b><span class='onl' id='onlc'></span></div><div class='path' style='margin-bottom:4px'>${T3('Du plus proche au plus éloigné. Touchez ✉️ pour écrire en privé.','Soti nan pi pre a rive nan pi lwen an. Peze ✉️ pou ekri an prive.','From closest to farthest. Tap ✉️ to write privately.')}</div>`+
+ L.map(x=>{const on=ONLINE.has(D(x.id)),r=ML?rel(ML,x.id).t:'';return `<div class='nt' data-pf='${x.id}'>${av(x.id,42)}<div style='flex:1;min-width:0'><b>${x.n}</b><div class='path'>${r&&r!=='Vous'?r:''}${on?`${r?' · ':''}<span class='onl'>${T3('en ligne','sou liy','online')}</span>`:''}</div></div>${x.acc&&!x.bn&&ML?`<button class='wbtn' data-mo='${x.id}' aria-label='${T3('Écrire à','Ekri','Message')} ${x.n}'>✉️</button>`:`<span class='path' style='align-self:center;font-size:.75rem'>${T3('pas encore inscrit','poko enskri','not signed up')}</span>`}</div>`}).join(''))}
+const mlF=mlistHtml;mlistHtml=function(){const h=mlF();return msq.trim()?h:h+familyCard()};
+document.addEventListener('click',e=>{const b=e.target.closest('.wbtn[data-mo]');if(!b)return;e.stopPropagation();e.preventDefault();tab='inbox';sub='m';mv=b.dataset.mo;mrt=null;render();window.scrollTo(0,0)},true);
+
+// --- publications épinglées (24 h) ---
+const isPinned=p=>p&&p.pin&&p.pin>Date.now();
+const rFam=render;render=function(){rFam();if(!SB||!READY)return;startPresence();
+ if(tab==='feed'){const f=document.getElementById('feed');if(f){const cards=[...f.querySelectorAll('.fp')];const first=cards[0];
+  const pins=cards.filter(el=>isPinned(postOf(el))).sort((a,b)=>postOf(b).pin-postOf(a).pin);
+  pins.reverse().forEach(el=>{if(!el.classList.contains('pinned')){el.classList.add('pinned');const p=postOf(el),h=Math.max(1,Math.ceil((p.pin-Date.now())/HR));el.insertAdjacentHTML('afterbegin',`<div class='pinb'>📌 ${T3(`Épinglé par l’administrateur · encore ${h} h`,`Admin an kole l anlè · ankò ${h} è`,`Pinned by the admin · ${h} h left`)}</div>`)}
+   const top=f.querySelector('.fp');if(top&&top!==el)top.before(el)})}}
+ decorateOnline()};
+// action dans le menu ⋯ de l'administrateur
+const oo0=openOpts;openOpts=function(o){oo0(o);if(o.t!=='p'||!(ISADM&&me==='admin'))return;const bx=document.querySelector('#odlg .box');if(!bx)return;
+ const pinned=isPinned(o.p);bx.insertAdjacentHTML('afterbegin',`<button class='oi' data-pin='${pinned?'off':'on'}'><span style='font-size:1.2rem'>📌</span>${pinned?T3('Désépingler','Retire l anlè','Unpin'):T3('Épingler en haut du fil (24 h)','Kole l anlè fil la (24 è)','Pin to top of feed (24 h)')}</button>`)};
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-pin]');if(!b||!SB||!OCUR)return;e.stopPropagation();e.preventDefault();
+ const p=OCUR.p,on=b.dataset.pin==='on';const r=await SB.from('posts').update({pinned_until:on?new Date(Date.now()+24*HR).toISOString():null}).eq('id',p.dbid);
+ if(r.error)return toast(r.error.message);await SB.from('admin_log').insert({action:on?'Publication épinglée 24 h':'Publication désépinglée'});
+ odlg(null);OCUR=null;toast(on?T3('📌 Épinglée en haut du fil pour 24 h','📌 Kole anlè fil la pou 24 è','📌 Pinned for 24 h'):T3('Publication désépinglée','Piblikasyon an pa kole ankò','Post unpinned'));kickSync(0,true)},true);
 
 BOOT().finally(hideSplash);setTimeout(hideSplash,7000);
 const wr0=document.querySelector('.wrap');if(wr0)wr0.scrollLeft=(wr0.scrollWidth-wr0.clientWidth)/2;

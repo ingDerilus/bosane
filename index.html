@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="L’espace privé de la famille de Bob &amp; Rosane : photos, nouvelles, anniversaires et souvenirs.">
 <meta property="og:type" content="website">
@@ -379,6 +380,73 @@ audio{display:block;width:240px;max-width:100%;height:38px;margin-top:4px}
 <p class="note">Personnes fictives, pour la démonstration. Dans la vraie application, chaque membre sera relié à ses parents et à son conjoint lors de son inscription.</p>
 <script src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'></script>
 <script>
+// ===== Application obligatoire sur téléphone et tablette =====
+(function(){
+ const UA=navigator.userAgent;
+ const inApp=()=>matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: minimal-ui)').matches||navigator.standalone===true||document.referrer.startsWith('android-app://');
+ try{if(new URLSearchParams(location.search).get('navigateur')==='1')localStorage.setItem('bosane-web','1')}catch(e){}
+ let web=false;try{web=localStorage.getItem('bosane-web')==='1'}catch(e){}
+ const mobile=matchMedia('(pointer:coarse)').matches&&/android|iphone|ipad|ipod|mobile/i.test(UA)||(/Macintosh/.test(UA)&&navigator.maxTouchPoints>1);
+ window.GATED=mobile&&!inApp()&&!web&&/^https?:/.test(location.protocol);
+ if(!window.GATED)return;
+ const ios=/iphone|ipad|ipod/i.test(UA)||(/Macintosh/.test(UA)&&navigator.maxTouchPoints>1);
+ const social=/FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|Snapchat|TikTok|musical_ly|Messenger/i.test(UA);
+ const iosSafari=ios&&/Safari/.test(UA)&&!/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(UA)&&!social;
+ const androidWV=/Android/.test(UA)&&(/; wv\)/.test(UA)||social);
+ const chromeLike=/Android/.test(UA)&&/Chrome\//.test(UA)&&!androidWV;
+ const t=(f,h,e)=>{const l=(window.lang||(()=>{try{return localStorage.getItem('lang')}catch(_){return null}})()||'fr');return l==='ht'?h:l==='en'?e:f};
+ let code='';try{code=(new URLSearchParams(location.search).get('code')||localStorage.getItem('bosane-code')||'').toUpperCase().slice(0,12)}catch(e){}
+ const url=location.origin+location.pathname+(code?'?code='+encodeURIComponent(code):'');
+ document.head.insertAdjacentHTML('beforeend',`<style>
+ #gate{position:fixed;inset:0;z-index:2147483000;background:linear-gradient(160deg,#eaf3fb,#fff7ea);color:#1c1e21;overflow-y:auto;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-overflow-scrolling:touch}#gate *{box-sizing:border-box}
+ #gate .gwrap{max-width:440px;margin:0 auto;padding:max(28px,env(safe-area-inset-top)) 22px 40px;text-align:center}
+ #gate img.glogo{width:96px;height:96px;border-radius:24px;box-shadow:0 8px 24px rgba(31,111,178,.25);margin:10px auto 14px;display:block}
+ #gate h1{font-size:1.45rem;margin:0 0 8px}#gate p{line-height:1.5;color:#4b4f56;margin:0 0 14px}
+ #gate .gbtn{display:block;width:100%;border:0;border-radius:28px;padding:15px;font:inherit;font-size:1.08rem;font-weight:700;background:#1f6fb2;color:#fff;margin:10px 0;text-decoration:none}
+ #gate .gbtn.galt{background:#fff;color:#1f6fb2;border:2px solid #1f6fb2}
+ #gate .gstep{display:flex;gap:12px;align-items:center;text-align:left;background:#fff;border-radius:16px;padding:12px 14px;margin:10px 0;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+ #gate .gstep b.gnum{flex:none;width:30px;height:30px;border-radius:50%;background:#1f6fb2;color:#fff;display:flex;align-items:center;justify-content:center}
+ #gate .gcode{background:#fff;border:2px dashed #e0a43a;border-radius:14px;padding:10px;margin:14px 0;font-size:.95rem}#gate .gcode b{font-size:1.3rem;letter-spacing:2px;color:#b9770e}
+ #gate .gwhy{background:none;font-size:.85rem;color:#65676b;margin-top:18px}
+ </style>`);
+ const box=document.createElement('div');box.id='gate';document.documentElement.appendChild(box);
+ const st=(n,h)=>`<div class='gstep'><b class='gnum'>${n}</b><div>${h}</div></div>`;
+ const codeBox=code?`<div class='gcode'>${t('Votre code d’invitation','Kòd envitasyon ou','Your invitation code')} : <b>${code}</b><br><span style='font-size:.85rem'>${t('Notez-le : l’application vous le demandera.','Ekri l : aplikasyon an ap mande l.','Write it down: the app will ask for it.')}</span></div>`:'';
+ const why=`<div class='gwhy'>🔒 ${t('BoSane s’utilise uniquement comme application : plus rapide, notifications des messages et anniversaires, et la famille reste à l’abri.','BoSane itilize sèlman kòm aplikasyon : pi rapid, notifikasyon mesaj ak fèt, epi fanmi an rete an sekirite.','BoSane is used only as an app: faster, notifications for messages and birthdays, and the family stays private.')}</div>`;
+ const head=`<img class='glogo' src='icon-192.png' alt='BoSane'><h1>${t('Installez l’application BoSane','Enstale aplikasyon BoSane','Install the BoSane app')}</h1>`;
+ function view(){let h=head;
+  if(window.GATEDONE){h+=`<p style='font-size:1.1rem'>✅ <b>${t('BoSane est installé !','BoSane enstale !','BoSane is installed!')}</b></p>${st(1,t('Fermez cette page.','Fèmen paj sa a.','Close this page.'))}${st(2,t('Sur votre écran d’accueil, touchez l’icône <b>BoSane</b> 🌳.','Sou ekran lakay ou, peze ikòn <b>BoSane</b> 🌳.','On your home screen, tap the <b>BoSane</b> icon 🌳.'))}`+codeBox}
+  else if(ios&&!iosSafari){h+=`<p>${t('Sur iPhone et iPad, l’installation se fait avec <b>Safari</b>.','Sou iPhone ak iPad, se ak <b>Safari</b> pou enstale.','On iPhone and iPad, install with <b>Safari</b>.')}</p>
+   <button class='gbtn' id='gcopy'>📋 ${t('Copier le lien de BoSane','Kopye lyen BoSane','Copy the BoSane link')}</button>
+   ${st(1,t('Ouvrez <b>Safari</b> 🧭','Louvri <b>Safari</b> 🧭','Open <b>Safari</b> 🧭'))}${st(2,t('Touchez la barre d’adresse et <b>collez</b> le lien.','Peze ba adrès la epi <b>kole</b> lyen an.','Tap the address bar and <b>paste</b> the link.'))}${st(3,t('Suivez ensuite les étapes qui s’affichent.','Swiv etap ki parèt yo.','Then follow the steps shown.'))}`+codeBox}
+  else if(ios){h+=`<p>${t('3 gestes, une seule fois :','3 jès, yon sèl fwa :','3 taps, only once:')}</p>
+   ${st(1,t('Touchez le bouton <b>Partager</b> <span style="font-size:1.2rem">⬆️</span> (en bas de l’écran, ou en haut sur iPad).','Peze bouton <b>Pataje</b> <span style="font-size:1.2rem">⬆️</span> (anba ekran an, oswa anlè sou iPad).','Tap the <b>Share</b> button <span style="font-size:1.2rem">⬆️</span> (bottom of the screen, or top on iPad).'))}
+   ${st(2,t('Descendez et touchez <b>« Sur l’écran d’accueil »</b> ➕','Desann epi peze <b>« Sou ekran lakay »</b> ➕','Scroll and tap <b>“Add to Home Screen”</b> ➕'))}
+   ${st(3,t('Touchez <b>Ajouter</b>, puis ouvrez <b>BoSane</b> depuis votre écran d’accueil.','Peze <b>Ajoute</b>, epi louvri <b>BoSane</b> sou ekran lakay ou.','Tap <b>Add</b>, then open <b>BoSane</b> from your home screen.'))}`+codeBox+
+   ``}
+  else if(androidWV||!chromeLike&&/Android/.test(UA)&&!/SamsungBrowser|EdgA|OPR|Firefox/.test(UA)){
+   h+=`<p>${t('Cette page est ouverte dans une autre application. Ouvrez-la dans <b>Chrome</b> pour installer BoSane.','Paj sa a louvri nan yon lòt aplikasyon. Louvri l nan <b>Chrome</b> pou enstale BoSane.','This page is open inside another app. Open it in <b>Chrome</b> to install BoSane.')}</p>
+   <a class='gbtn' href='intent://${location.host}${location.pathname}${code?'?code='+encodeURIComponent(code):''}#Intent;scheme=https;package=com.android.chrome;end'>🌐 ${t('Ouvrir dans Chrome','Louvri nan Chrome','Open in Chrome')}</a>
+   <button class='gbtn galt' id='gcopy'>📋 ${t('Copier le lien','Kopye lyen an','Copy the link')}</button>
+   <p style='font-size:.9rem'>${t('Ou bien : menu ⋮ en haut à droite → <b>« Ouvrir dans Chrome »</b>.','Oswa : meni ⋮ anlè adwat → <b>« Louvri nan Chrome »</b>.','Or: ⋮ menu at the top right → <b>“Open in Chrome”</b>.')}</p>`}
+  else if(DEFI){h+=`<p>${t('Un seul toucher, c’est gratuit et léger.','Yon sèl manyen, li gratis e li lejè.','One tap, free and light.')}</p><button class='gbtn' id='ginst'>📲 ${t('Installer BoSane','Enstale BoSane','Install BoSane')}</button>`+codeBox}
+  else{h+=`<p>${t('BoSane est peut-être <b>déjà installé</b> : cherchez l’icône <b>BoSane</b> 🌳 sur votre écran d’accueil et touchez-la.','BoSane ka <b>deja enstale</b> : chèche ikòn <b>BoSane</b> 🌳 sou ekran lakay ou epi peze l.','BoSane may be <b>already installed</b>: look for the <b>BoSane</b> 🌳 icon on your home screen and tap it.')}</p>
+   <p>${t('Sinon :','Sinon :','Otherwise:')}</p>${st(1,t('Touchez le menu <b>⋮</b> en haut à droite.','Peze meni <b>⋮</b> anlè adwat.','Tap the <b>⋮</b> menu at the top right.'))}${st(2,t('Touchez <b>« Installer l’application »</b> ou <b>« Ajouter à l’écran d’accueil »</b>.','Peze <b>« Enstale aplikasyon »</b> oswa <b>« Ajoute sou ekran lakay »</b>.','Tap <b>“Install app”</b> or <b>“Add to Home screen”</b>.'))}${st(3,t('Ouvrez <b>BoSane</b> depuis votre écran d’accueil.','Louvri <b>BoSane</b> sou ekran lakay ou.','Open <b>BoSane</b> from your home screen.'))}`+codeBox}
+  box.innerHTML=`<div class='gwrap'>${h}${why}</div>`}
+ let DEFI=null;
+ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();DEFI=e;view()});
+ window.addEventListener('appinstalled',()=>{window.GATEDONE=true;view()});
+ matchMedia('(display-mode: standalone)').addEventListener&&matchMedia('(display-mode: standalone)').addEventListener('change',e=>{if(e.matches){box.remove();window.GATED=false}});
+ box.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.id==='ginst'&&DEFI){DEFI.prompt();try{const c=await DEFI.userChoice;if(c&&c.outcome==='accepted'){window.GATEDONE=true}}catch(_){}DEFI=null;view()}
+  if(b.id==='gcopy'){try{await navigator.clipboard.writeText(url);b.textContent='✅ '+t('Lien copié','Lyen kopye','Link copied')}catch(_){prompt(t('Copiez ce lien :','Kopye lyen sa a :','Copy this link:'),url)}}});
+ if(ios&&code){try{const m={name:'BoSane — Bob & Rosane',short_name:'BoSane',start_url:location.origin+location.pathname+'?code='+encodeURIComponent(code),scope:location.origin+location.pathname,display:'standalone',background_color:'#ffffff',theme_color:'#1f6fb2',icons:[{src:location.origin+location.pathname.replace(/[^/]*$/,'')+'icon-192.png',sizes:'192x192',type:'image/png'},{src:location.origin+location.pathname.replace(/[^/]*$/,'')+'icon-512.png',sizes:'512x512',type:'image/png'}]};
+  const l=document.querySelector('link[rel=manifest]');if(l)l.href='data:application/manifest+json,'+encodeURIComponent(JSON.stringify(m))}catch(e){}}
+ view();setTimeout(view,1500);
+ // pas de notifications ni de son sous la page d'installation
+ try{const h=document.getElementById('splash');if(h)h.style.display='none'}catch(e){}
+})();
+
 const P=[
 {id:'jo',n:'Joseph',g:'m',sp:'ma'},{id:'ma',n:'Marie',g:'f',sp:'jo'},
 {id:'pa',n:'Paul',g:'m',par:['jo','ma'],sp:'so'},{id:'so',n:'Sophie',g:'f',sp:'pa'},
@@ -904,7 +972,7 @@ const p=by[me],nm2=a=>a.length?a.map(x=>by[x].n).join(', '):'—';
 const par=(p.par||[]).filter(x=>by[x]),kids=P.filter(c=>c.par&&c.par.includes(me)).map(c=>c.id),sib=P.filter(x=>x.id!==me&&x.par&&p.par&&x.par.join()===p.par.join()).map(x=>x.id);
 const row=(k,v)=>`<div style='display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--line)'><span class='path'>${k}</span><span style='text-align:right'>${v}</span></div>`;
 const bd=BD[me]?`${fmtD(BD[me])} ${BD[me].getFullYear()}`:'—';
-d.innerHTML=card(`<div style='display:flex;gap:14px;align-items:center;margin-bottom:8px'>${av(me,64)}<div><b style='font-size:1.15rem'>${p.n}</b><div class='path'>${LANGS[lang].l}</div></div></div>`+row(T3('Date de naissance','Dat nesans','Birthday'),bd)+row(T3('Téléphone','Telefòn','Phone'),'+•• ••• ••• ••'+(me.charCodeAt(0)%90+10))+row(T3('Parents','Paran','Parents'),nm2(par))+row(T3('Conjoint(e)','Konjwen','Spouse'),p.sp&&by[p.sp]?by[p.sp].n:'—')+row(T3('Enfants','Pitit','Children'),nm2(kids))+row(T3('Frères et sœurs','Frè ak sè','Siblings'),nm2(sib)))
+d.innerHTML=card(`<div style='display:flex;gap:14px;align-items:center;margin-bottom:8px'>${av(me,64)}<div><b style='font-size:1.15rem'>${p.n}</b><div class='path'>${LANGS[lang].l}</div></div></div>`+row(T3('Date de naissance','Dat nesans','Birthday'),bd)+row(T3('Parents','Paran','Parents'),nm2(par))+row(T3('Conjoint(e)','Konjwen','Spouse'),p.sp&&by[p.sp]?by[p.sp].n:'—')+row(T3('Enfants','Pitit','Children'),nm2(kids))+row(T3('Frères et sœurs','Frè ak sè','Siblings'),nm2(sib)))
 +card(`<b>🔒 ${T3('Connexion sécurisée','Koneksyon sekirize','Secure sign-in')}</b><div class='path' style='margin-top:6px'>${T3('Numéro de téléphone + code reçu par SMS, ou compte Google. Seul le propriétaire du profil peut le modifier. (Démo : la vraie connexion viendra avec les vrais comptes.)','Nimewo telefòn + kòd ou resevwa pa SMS, oswa kont Google. Se sèlman mèt pwofil la ki ka modifye l. (Demo : vrè koneksyon an ap vini ak vrè kont yo.)','Phone number + code received by SMS, or Google account. Only the profile owner can edit it. (Demo: real sign-in will come with real accounts.)')}</div>`)
 +card(`<button class='pill' data-goto='${me}'>🌳 ${T3('Voir ma place dans l’arbre','Gade plas mwen nan pyebwa a','See my place in the tree')}</button>`)}
 const rl0=renderLogoTab;renderLogoTab=function(){rl0();renderTabs();renderInbox();renderMe()};
@@ -1055,7 +1123,7 @@ const grp=(l,a)=>a.length?`<div class='path'>${l}</div><div class='frow'>${a.map
 let body='';
 if(ptab==='posts'){const L=posts.filter(x=>(x.a===id||x.mem===id)&&!x.sys).sort((a,b)=>a.h-b.h);L.forEach(x=>score(x));
 body=(own?`<div class='comp'><div class='top'>${av(me,40)}<textarea id='pn' class='fi' rows='1' placeholder='${T3('Quoi de neuf ?','Kisa ki nouvo ?','What’s new?')}'></textarea></div>${DIMG?dprev():''}<div class='bar'><button class='ib' data-cam='1' aria-label='${T3('Ajouter une photo','Ajoute yon foto','Add a photo')}'>${svg('camera',20)}</button><button class='ib' data-at='1' aria-label='${L3('at')}'>${svg('at',20)}</button><button class='ib snd' data-pp='1' style='margin-left:auto' aria-label='${L3('send')}'>${svg('send',18)}</button></div></div>`:p.dc&&me!=='admin'?`<div class='comp'><div class='top'>${av(me,40)}<textarea id='mmn' class='fi' rows='2' placeholder='${T3('Partager un souvenir de','Pataje yon souvni','Share a memory of')} ${p.n}…'></textarea></div>${DIMG?dprev():''}<div class='bar'><button class='ib camg' data-memcam='1' aria-label='${T3('Ajouter une photo','Ajoute yon foto','Add a photo')}'>${svg('camera',20)}</button><button class='ib${REC?' recon':''}' data-vrec='mem' data-vt='${id}' aria-label='${T3('Souvenir vocal','Souvni vokal','Voice memory')}'>${svg('mic',20)}</button><button class='ib snd' data-mempost='${id}' style='margin-left:auto' aria-label='${L3('send')}'>${svg('send',18)}</button></div></div>`:'')+(L.length?L.map(postHtml).join(''):card(`<div class='path'>${T3('Aucune publication.','Pa gen piblikasyon.','No posts yet.')}</div>`))}
-else if(ptab==='about'){const b=BD[id];body=card(row(T3('Date de naissance','Dat nesans','Birthday'),b?`${fmtD(b)} ${b.getFullYear()}`:'—')+row(T3('Langue','Lang','Language'),LANGS[own?lang:(PL[id]||'fr')].l)+(own?row(T3('Téléphone','Telefòn','Phone'),'+•• ••• ••• ••'+(id.charCodeAt(0)%90+10)):'')+row(T3('Connexion','Koneksyon','Sign-in'),`🔒 ${T3('Téléphone + code ou Google (démo)','Telefòn + kòd oswa Google (demo)','Phone + code or Google (demo)')}`))}
+else if(ptab==='about'){const b=BD[id];body=card(row(T3('Date de naissance','Dat nesans','Birthday'),b?`${fmtD(b)} ${b.getFullYear()}`:'—')+row(T3('Langue','Lang','Language'),LANGS[own?lang:(PL[id]||'fr')].l)+'')}
 else body=card(grp(T3('Parents','Paran','Parents'),par)+grp(T3('Conjoint(e)','Konjwen','Spouse'),sp)+grp(T3('Enfants','Pitit','Children'),kids)+grp(T3('Frères et sœurs','Frè ak sè','Siblings'),sib)||`<div class='path'>—</div>`);
 d.innerHTML=head+body}
 const rl1=renderLogoTab;renderLogoTab=function(){rl1();renderSheet();renderSrch();
@@ -1390,8 +1458,8 @@ if(k==='wait'){b.innerHTML=`<div class='path'>${T3('Connexion…','Koneksyon…'
 else if(k==='banned')b.innerHTML=`<div style='font-size:1.8rem'>🚫</div><div><b>${T3('Votre accès a été suspendu','Aksè ou sispann','Your access has been suspended')}</b></div><div class='path' style='margin:8px 0'>${T3('Contactez l’administrateur de BoSane pour en savoir plus.','Kontakte administratè BoSane pou plis enfòmasyon.','Contact the BoSane administrator for more information.')}</div><button class='lk' id='alogout'>${T3('Se déconnecter','Dekonekte','Sign out')}</button>`;
 else if(k==='stuck')b.innerHTML=`<div><b>${T3('La connexion prend du temps','Koneksyon an ap pran tan','Connection is taking a while')}</b></div><div class='path' style='margin:8px 0'>${T3('Vérifiez votre internet, puis réessayez.','Verifye entènèt ou, epi eseye ankò.','Check your internet, then try again.')}</div>${LASTERR?`<div class='path' style='font-size:.75rem;word-break:break-word;opacity:.8'>${esc(LASTERR.slice(0,160))}</div>`:''}<button class='pill' id='aretry'>${T3('Réessayer','Eseye ankò','Try again')}</button><button class='lk' id='alogout'>${T3('Se déconnecter','Dekonekte','Sign out')}</button>`;
 else if(k==='fail')b.innerHTML=`<div>${T3('Impossible de charger BoSane. Vérifiez votre connexion internet, puis rechargez la page.','Nou pa ka chaje BoSane. Verifye entènèt ou, epi rechaje paj la.','Cannot load BoSane. Check your internet connection, then reload the page.')}</div>`;
-else if(k==='email')b.innerHTML=`<div><b>${T3('Connexion','Koneksyon','Sign in')}</b></div><div class='path'>${T3('Entrez votre adresse e-mail : vous recevrez un lien de connexion.','Antre adrès imèl ou : w ap resevwa yon lyen pou konekte.','Enter your email address: you will receive a sign-in link.')}</div><input id='aemail' type='email' autocomplete='email' placeholder='nom@exemple.com' value='${esc(AEMAIL)}'><button class='pill' id='asendmail'>${T3('Recevoir mon lien','Resevwa lyen mwen','Get my link')}</button>${E}`;
-else if(k==='code')b.innerHTML=`<div><b>📩 ${T3('Vérifiez vos e-mails','Gade imèl ou','Check your email')}</b></div><div style='margin:10px 0'>${T3('Un message a été envoyé à','Nou voye yon mesaj bay','A message was sent to')} <b>${esc(AEMAIL)}</b>.</div><div>${T3('Ouvrez-le <b>sur cet appareil</b> et touchez <b>« Sign in »</b> : vous serez connecté automatiquement.','Louvri l <b>sou aparèy sa a</b> epi peze <b>« Sign in »</b> : w ap konekte otomatikman.','Open it <b>on this device</b> and tap <b>“Sign in”</b>: you will be signed in automatically.')}</div><div class='path' style='margin-top:14px'>${T3('Vous avez reçu un code à chiffres ? Entrez-le ici :','Ou resevwa yon kòd ak chif ? Antre l la :','Got a number code? Enter it here:')}</div><input id='acode' inputmode='numeric' autocomplete='one-time-code' maxlength='10' placeholder='123456'><button class='pill' id='averify'>${T3('Valider','Valide','Confirm')}</button>${E}<button class='lk' id='aback'>${T3('Changer d’adresse ou renvoyer le code','Chanje adrès oswa revoye kòd la','Change address or resend the code')}</button>`;
+else if(k==='email')b.innerHTML=`<div><b>${T3('Connexion','Koneksyon','Sign in')}</b></div><div class='path'>${T3('Entrez votre adresse e-mail : vous recevrez un code de connexion.','Antre adrès imèl ou : w ap resevwa yon kòd pou konekte.','Enter your email address: you will receive a sign-in code.')}</div><input id='aemail' type='email' autocomplete='email' placeholder='nom@exemple.com' value='${esc(AEMAIL)}'><button class='pill' id='asendmail'>${T3('Recevoir mon code','Resevwa kòd mwen','Get my code')}</button>${E}`;
+else if(k==='code')b.innerHTML=`<div><b>📩 ${T3('Vérifiez vos e-mails','Gade imèl ou','Check your email')}</b></div><div style='margin:10px 0'>${T3('Un message a été envoyé à','Nou voye yon mesaj bay','A message was sent to')} <b>${esc(AEMAIL)}</b>.</div><div style='margin-top:6px'>${T3('Entrez ici le <b>code à 6 chiffres</b> écrit dans l’e-mail :','Antre <b>kòd 6 chif</b> ki ekri nan imèl la isit la :','Enter the <b>6-digit code</b> written in the email:')}</div><input id='acode' inputmode='numeric' autocomplete='one-time-code' maxlength='10' placeholder='123456'><button class='pill' id='averify'>${T3('Valider','Valide','Confirm')}</button>${E}<div class='path' style='margin-top:10px;font-size:.8rem'>${T3('Astuce : copiez le code dans l’e-mail, revenez dans BoSane et collez-le.','Konsèy : kopye kòd la nan imèl la, retounen nan BoSane epi kole l.','Tip: copy the code from the email, come back to BoSane and paste it.')}</div><button class='lk' id='aback'>${T3('Changer d’adresse ou renvoyer le code','Chanje adrès oswa revoye kòd la','Change address or resend the code')}</button>`;
 else if(k==='claim')b.innerHTML=`<div><b>${T3('Bienvenue dans BoSane !','Byenveni nan BoSane !','Welcome to BoSane!')}</b></div><div class='path'>${T3('Entrez le code d’invitation que votre famille vous a transmis.','Antre kòd envitasyon fanmi ou te ba ou a.','Enter the invitation code your family gave you.')}</div><input id='aclaim' autocapitalize='characters' maxlength='12' placeholder='AB12CD34'><button class='pill' id='aclaimbtn'>${T3('Rejoindre ma famille','Rejwenn fanmi mwen','Join my family')}</button>${E}${cancel?`<button class='lk' id='aclose'>${T3('Annuler','Anile','Cancel')}</button>`:`<button class='lk' id='alogout'>${T3('Se déconnecter','Dekonekte','Sign out')}</button>`}`;
 const f=b.querySelector('input');if(f)setTimeout(()=>f.focus(),50)}
 document.getElementById('auth').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const id=b.id;
@@ -1729,7 +1797,7 @@ pc.insertAdjacentHTML('afterend',h)};
 // ===== Invitations chaleureuses (WhatsApp, partage) =====
 const SITE='https://ingderilus.github.io/bosane/';
 // le lien d'invitation contient le code : on le garde pour le pré-remplir
-(function(){const q=new URLSearchParams(location.search).get('code');if(q){try{localStorage.setItem('bosane-code',q.toUpperCase().slice(0,12))}catch(e){}history.replaceState(null,'',location.pathname+location.hash)}})();
+(function(){const q=new URLSearchParams(location.search).get('code');if(q){try{localStorage.setItem('bosane-code',q.toUpperCase().slice(0,12))}catch(e){}if(!window.GATED)history.replaceState(null,'',location.pathname+location.hash)}})();
 const savedCode=()=>{try{return localStorage.getItem('bosane-code')||''}catch(e){return ''}};
 const aS0=authScreen;authScreen=function(k,err,cancel){aS0(k,err,cancel);if(k==='claim'){const c=savedCode(),i=document.getElementById('aclaim');if(c&&i&&!i.value){i.value=c;i.insertAdjacentHTML('afterend',`<div class='path' style='color:#2e9e5b;margin-top:-6px'>✔ ${T3('Code de votre invitation détecté','Kòd envitasyon ou detekte','Invitation code detected')}</div>`)}}
  if(k==='email'&&savedCode()){const b=document.getElementById('abody');b.insertAdjacentHTML('afterbegin',`<div style='font-size:1.6rem'>🌳</div><div style='margin-bottom:6px'><b>${T3('Votre famille vous attend !','Fanmi ou ap tann ou !','Your family is waiting!')}</b></div>`)}};
@@ -1751,7 +1819,7 @@ ${custom?`\n💬 « ${custom} »\n`:''}
 👉 Touche ce lien : ${link}
 🔑 Ton code : *${code}*
 
-C’est simple : entre ton adresse e-mail, touche le lien que tu recevras, et ta place dans l’arbre t’attend.
+C’est simple : touche le lien, installe l’application, puis touche « Rejoindre ma famille ». Pas besoin d’e-mail ni de mot de passe.
 
 🔔 Pense à *activer les notifications* pour ne rien manquer de la famille.
 
@@ -1765,7 +1833,7 @@ ${custom?`\n💬 « ${custom} »\n`:''}
 👉 Peze lyen sa a : ${link}
 🔑 Kòd ou : *${code}*
 
-Li fasil : mete adrès imèl ou, peze lyen w ap resevwa a, epi plas ou nan pyebwa a ap tann ou.
+Li fasil : peze lyen an, enstale aplikasyon an, epi peze « Rejwenn fanmi mwen ». Ou pa bezwen imèl ni modpas.
 
 🔔 Pa bliye *aktive notifikasyon* pou w pa rate anyen nan fanmi an.
 
@@ -1779,7 +1847,7 @@ ${custom?`\n💬 “${custom}”\n`:''}
 👉 Tap this link: ${link}
 🔑 Your code: *${code}*
 
-It’s easy: enter your email, tap the link you receive, and your place in the family tree is waiting.
+It’s easy: tap the link, install the app, then tap “Join my family”. No email or password needed.
 
 🔔 Remember to *turn on notifications* so you don’t miss anything.
 
@@ -2424,6 +2492,105 @@ document.addEventListener('click',async e=>{if(!SB)return;const b=e.target.close
     for(let i=0;i<all.length;i+=100)await SB.storage.from('media').remove(all.slice(i,i+100))}}catch(_){}
   const r=await SB.rpc('delete_my_account');if(r.error){b.disabled=false;b.textContent=T3('Supprimer définitivement','Efase nèt','Delete permanently');return toast(r.error.message)}
   try{const rg=await navigator.serviceWorker.getRegistration(),sb=rg&&await rg.pushManager.getSubscription();if(sb)await sb.unsubscribe()}catch(_){}try{await SB.auth.signOut()}catch(_){}odlg(null);alert(T3('Votre compte a été supprimé. Merci d’avoir fait partie de BoSane 💛','Kont ou efase. Mèsi paske w te fè pati BoSane 💛','Your account has been deleted. Thank you for being part of BoSane 💛'));location.reload();return}},true);
+
+
+// ===== Entrée simplifiée : le code d'invitation suffit (sans e-mail) =====
+let EMAILMODE=false;
+const aSE=authScreen;authScreen=function(k,err,cancel){
+ if(k==='email'&&!EMAILMODE)k='start';
+ if(k!=='start'){aSE(k,err,cancel);if(k==='email'){const b=document.getElementById('abody');if(b&&!b.querySelector('#astart'))b.insertAdjacentHTML('beforeend',`<button class='lk' id='astart' style='margin-top:10px'>🔑 ${T3('J’ai un code d’invitation','Mwen gen yon kòd envitasyon','I have an invitation code')}</button>`)}return}
+ const a=document.getElementById('auth'),b=document.getElementById('abody');a.classList.remove('hide');clearTimeout(window.WAITT);const c=savedCode();
+ b.innerHTML=`<div style='font-size:2.2rem'>🌳</div>
+ <div style='font-size:1.25rem;margin:4px 0 6px'><b>${c?T3('Votre famille vous attend !','Fanmi ou ap tann ou !','Your family is waiting!'):T3('Bienvenue sur BoSane','Byenveni sou BoSane','Welcome to BoSane')}</b></div>
+ <div class='path' style='margin-bottom:8px'>${c?T3('Votre code d’invitation est prêt. Touchez simplement le bouton :','Kòd envitasyon ou pare. Annik peze bouton an :','Your invitation code is ready. Just tap the button:'):T3('Entrez le code d’invitation reçu de votre famille :','Antre kòd envitasyon fanmi ou te voye ba ou a :','Enter the invitation code your family sent you:')}</div>
+ <input id='ajcode' autocapitalize='characters' autocomplete='off' maxlength='12' placeholder='AB12CD34' value='${esc(c)}' style='text-align:center;font-size:1.35rem;letter-spacing:3px;font-weight:700'>
+ <button class='pill' id='ajoin' style='font-size:1.1rem;padding:14px'>${T3('Rejoindre ma famille','Rejwenn fanmi mwen','Join my family')} →</button>${err?`<div class='aerr'>${esc(err)}</div>`:''}
+ <div style='margin-top:18px;border-top:1px solid var(--line);padding-top:12px'><button class='lk' id='ahave'>${T3('J’ai déjà un compte (connexion par e-mail)','Mwen deja gen yon kont (konekte ak imèl)','I already have an account (sign in by email)')}</button></div>`;
+ if(!c)setTimeout(()=>{const i=document.getElementById('ajcode');if(i)i.focus()},50)};
+document.getElementById('auth').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.id==='ahave'){e.stopImmediatePropagation();EMAILMODE=true;authScreen('email');return}
+ if(b.id==='astart'){e.stopImmediatePropagation();EMAILMODE=false;authScreen('start');return}
+ if(b.id!=='ajoin')return;e.stopImmediatePropagation();
+ const code=(document.getElementById('ajcode').value||'').trim().toUpperCase().replace(/\s+/g,'');if(code.length<4)return authScreen('start',T3('Entrez votre code d’invitation','Antre kòd envitasyon ou','Enter your invitation code'));
+ try{localStorage.setItem('bosane-code',code)}catch(_){}
+ b.disabled=true;b.textContent='…';
+ let user=null;try{const s=await SB.auth.getSession();user=s.data.session&&s.data.session.user}catch(_){}
+ if(!user){const r=await SB.auth.signInAnonymously();if(r.error){EMAILMODE=true;return authScreen('email',T3('L’entrée directe n’est pas encore activée : utilisez votre e-mail.','Antre dirèk la poko aktive : sèvi ak imèl ou.','Direct entry is not enabled yet: use your email.'))}user=r.data.user}
+ const {data,error}=await SB.rpc('claim_invitation',{p_code:code});
+ if(error){if(user&&user.is_anonymous){try{await SB.auth.signOut()}catch(_){}}
+  return authScreen('start',T3('Ce code n’est pas valide ou a déjà servi. Vérifiez-le. Si vous avez déjà un compte, touchez « J’ai déjà un compte » ci-dessous.','Kòd sa a pa bon oswa li deja sèvi. Verifye l. Si w deja gen yon kont, peze « Mwen deja gen yon kont » anba a.','This code is invalid or already used. Check it. If you already have an account, tap “I already have an account” below.'))}
+ try{localStorage.removeItem('bosane-code')}catch(_){}
+ UID=user.id;MYDB=data;me=L(MYDB);FIRST=true;await reload(true);document.getElementById('auth').classList.add('hide');live();
+ toast(T3('Bienvenue dans la famille 🎉','Byenveni nan fanmi an 🎉','Welcome to the family 🎉'))},true);
+// « Mon compte » : proposer d'ajouter un e-mail aux comptes créés sans e-mail
+const acD=acctDlg;acctDlg=function(){acD();SB.auth.getSession().then(s=>{const u=s.data.session&&s.data.session.user;if(!u||!(u.is_anonymous||!u.email))return;const box=document.querySelector('#odlg .box');if(!box)return;
+ box.querySelectorAll('.ach')[0].outerHTML=`<div class='ach'>✉️ ${T3('Ajouter mon e-mail (conseillé)','Ajoute imèl mwen (konseye)','Add my email (recommended)')}</div><div class='path' style='padding:0 6px'>${T3('Sans e-mail, si vous changez de téléphone, il faudra demander un nouveau code à l’administrateur. Avec un e-mail, vous pourrez vous reconnecter seul.','San imèl, si w chanje telefòn, fò w mande administratè a yon nouvo kòd. Ak yon imèl, w ap ka rekonekte poukont ou.','Without an email, if you change phones you’ll need a new code from the admin. With an email, you can sign back in yourself.')}</div>`;
+ const cur=box.querySelector('.path b');if(cur&&cur.textContent==='—')cur.closest('.path').remove()})};
+// administrateur : QR code d'invitation (à faire scanner en personne)
+function qrDlg(code,name){odlg(`<b style='display:block;padding:6px'>📷 ${T3('Invitation de','Envitasyon','Invitation for')} ${name}</b><div class='path' style='padding:0 6px'>${T3('Demandez-lui d’ouvrir l’appareil photo de son téléphone et de viser ce code.','Mande l louvri kamera telefòn li epi vize kòd sa a.','Ask them to open their phone camera and point it at this code.')}</div>
+ <div id='qrbox' style='display:flex;justify-content:center;padding:18px;background:#fff;border-radius:14px;margin:10px 0'>…</div><div style='text-align:center;font-size:1.3rem;letter-spacing:3px'><b>${code}</b></div>
+ <div class='row' style='justify-content:flex-end;margin-top:8px'><button class='pill gh' data-oa='x'>${T3('Fermer','Fèmen','Close')}</button></div>`);
+ const draw=()=>{const el=document.getElementById('qrbox');if(!el)return;el.innerHTML='';new QRCode(el,{text:`${SITE}?code=${code}`,width:240,height:240,correctLevel:QRCode.CorrectLevel.M})};
+ if(window.QRCode)draw();else{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=draw;s.onerror=()=>{const el=document.getElementById('qrbox');if(el)el.textContent=T3('Connexion internet nécessaire pour afficher le QR code.','Fò w gen entènèt pou montre QR kòd la.','Internet needed to show the QR code.')};document.head.appendChild(s)}}
+const rQR=render;render=function(){rQR();if(!SB||!READY)return;document.querySelectorAll('[data-winv]').forEach(w=>{if(!w.parentElement.querySelector('[data-qrc]'))w.insertAdjacentHTML('afterend',`<button class='ghost' data-qrc='${w.dataset.winv}' aria-label='QR code'>📷 QR</button>`)})};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-qrc],[data-iqr]');if(!b)return;e.stopPropagation();e.preventDefault();const code=b.dataset.qrc||b.dataset.iqr;const c=(CODES||[]).find(x=>x.code===code);if(document.getElementById('invdlg')){IVT=null;drawInv()}qrDlg(code,c?c.n:'')},true);
+const dIQ=drawInv;drawInv=function(){dIQ();const d=document.getElementById('invdlg');if(d&&IVT&&!d.querySelector('[data-iqr]')){const cp=d.querySelector('[data-icp]');if(cp)cp.insertAdjacentHTML('afterend',`<button class='pill gh' data-iqr='${IVT.code}' style='flex:1'>📷 QR</button>`)}};
+
+
+// ===== Profil complet : pays, ville, métier, coordonnées =====
+let INFO={},INFOOK=false;
+const FLAGS={'Haïti':'🇭🇹','États-Unis':'🇺🇸','Canada':'🇨🇦','France':'🇫🇷','République dominicaine':'🇩🇴','Chili':'🇨🇱','Brésil':'🇧🇷','Bahamas':'🇧🇸','Mexique':'🇲🇽','Belgique':'🇧🇪','Suisse':'🇨🇭','Guadeloupe':'🇬🇵','Martinique':'🇲🇶','Guyane':'🇬🇫','Royaume-Uni':'🇬🇧','Espagne':'🇪🇸','Allemagne':'🇩🇪','Panama':'🇵🇦','Turks-et-Caïcos':'🇹🇨','Cuba':'🇨🇺','Jamaïque':'🇯🇲','Venezuela':'🇻🇪','Argentine':'🇦🇷'};
+const flag=c=>FLAGS[c]||(c?'🌍':'');
+document.head.insertAdjacentHTML('beforeend',`<style>.irow{display:flex;gap:12px;align-items:center;padding:9px 2px;border-top:1px solid var(--line)}.irow:first-of-type{border-top:0}.irow .ic{font-size:1.2rem;width:26px;text-align:center}.irow a{color:var(--bl);text-decoration:none;font-weight:600}
+.pf label{display:block;font-size:.85rem;color:var(--mut);margin:10px 4px 2px}.pf .acf{margin:2px 0}.pf .two{display:flex;gap:8px}.pf .two>div{flex:1;min-width:0}.pf .ck{display:flex;align-items:center;gap:8px;font-size:.88rem;margin:4px 4px 0;color:var(--txt)}</style>`);
+async function loadInfo(){if(!SB||!READY)return;try{
+ const [a,c]=await Promise.all([SB.from('profiles').select('id,first_name,last_name,nickname,country,city,profession'),SB.rpc('family_contacts')]);
+ if(a.error)return;INFO={};(a.data||[]).forEach(r=>{INFO[L(r.id)]={fn:r.first_name||'',ln:r.last_name||'',nick:r.nickname||'',country:r.country||'',city:r.city||'',job:r.profession||''}});
+ (c.data||[]).forEach(r=>{const k=L(r.profile_id);INFO[k]=INFO[k]||{};Object.assign(INFO[k],{phone:r.phone||'',email:r.email||'',pv:r.phone_visible,ev:r.email_visible,hasPriv:true})});INFOOK=true}catch(e){}}
+const rlI=reload;reload=async function(){await rlI.apply(this,arguments);if(READY){await loadInfo();INTERNAL=true;try{render()}finally{INTERNAL=false}}};
+function infoCard(id){const i=INFO[id]||{},own=id===meL()&&me!=='admin',r=[];
+ const row=(ic,h)=>r.push(`<div class='irow'><span class='ic'>${ic}</span><div style='flex:1;min-width:0'>${h}</div></div>`);
+ if(i.ln||i.nick)row('🪪',[esc(by[id]?unesc(by[id].n):''),esc(i.ln)].filter(Boolean).join(' ')+(i.nick?` <span class='path'>« ${esc(i.nick)} »</span>`:''));
+ if(i.city||i.country)row(flag(i.country),T3('Vit à ','Rete ','Lives in ')+'<b>'+[esc(i.city),esc(i.country)].filter(Boolean).join(', ')+'</b>');
+ if(i.job)row('💼',esc(i.job));
+ if(i.phone){const n=i.phone.replace(/[^\d+]/g,'');row('📞',`<a href='https://wa.me/${n.replace(/^\+/,'')}' target='_blank' rel='noopener'>${esc(i.phone)}</a> <span class='path'>· WhatsApp</span>${own&&!i.pv?` <span class='path'>· 🔒 ${T3('visible par vous seul','se ou sèl ki wè l','only you')}</span>`:''}`)}
+ if(i.email)row('✉️',`<a href='mailto:${esc(i.email)}'>${esc(i.email)}</a>${own&&!i.ev?` <span class='path'>· 🔒 ${T3('visible par vous seul','se ou sèl ki wè l','only you')}</span>`:''}`);
+ if(!r.length&&!own)return '';
+ return `<div class='comp' id='infocard'><div class='famh'><b>ℹ️ ${T3('Informations','Enfòmasyon','Information')}</b>${own?`<button class='pill gh' data-infoedit='1' style='padding:6px 12px'>✏️ ${T3('Modifier','Modifye','Edit')}</button>`:''}</div>${r.join('')||`<div class='path' style='padding:6px 2px'>${T3('Dites à la famille où vous vivez, ce que vous faites et comment vous joindre.','Di fanmi an kote w rete, sa w fè ak kijan pou yo jwenn ou.','Tell the family where you live, what you do and how to reach you.')}</div><button class='pill' data-infoedit='1' style='margin-top:6px'>✏️ ${T3('Compléter mon profil','Konplete pwofil mwen','Complete my profile')}</button>`}</div>`}
+const CTRY=Object.keys(FLAGS);
+async function infoDlg(first){const ML=meL(),i=INFO[ML]||{};let anon=false,acctMail='';try{const s=await SB.auth.getSession(),u=s.data.session&&s.data.session.user;anon=!!(u&&(u.is_anonymous||!u.email));acctMail=u&&u.email||''}catch(_){}
+ const other=i.country&&!CTRY.includes(i.country);const v=x=>esc(x||'');
+ odlg(`<div class='pf'><b style='display:block;padding:6px'>${first?'👋 '+T3('Complétez votre profil','Konplete pwofil ou','Complete your profile'):'✏️ '+T3('Mes informations','Enfòmasyon mwen','My information')}</b>
+ ${first?`<div class='path' style='padding:0 6px'>${T3('Pour que la famille sache où vous êtes et comment vous joindre. Tout est facultatif et modifiable plus tard.','Pou fanmi an konnen kote w ye ak kijan pou jwenn ou. Tout se si w vle, ou ka chanje l pita.','So the family knows where you are and how to reach you. Everything is optional and can be changed later.')}</div>`:''}
+ <div class='two'><div><label>${T3('Prénom','Non','First name')}</label><input id='pf_fn' class='acf' maxlength='40' value='${v(i.fn||(by[ML]?unesc(by[ML].n):''))}'></div><div><label>${T3('Nom de famille','Siyati','Last name')}</label><input id='pf_ln' class='acf' maxlength='40' value='${v(i.ln)}'></div></div>
+ <label>${T3('Surnom (comment la famille vous appelle)','Ti non (jan fanmi an rele w)','Nickname')}</label><input id='pf_nick' class='acf' maxlength='30' value='${v(i.nick)}'>
+ <label>🌍 ${T3('Pays où vous vivez','Peyi kote w rete','Country you live in')}</label><select id='pf_ct' class='acf'><option value=''>—</option>${CTRY.map(c=>`<option ${i.country===c?'selected':''}>${c}</option>`).join('')}<option value='*' ${other?'selected':''}>${T3('Autre…','Lòt…','Other…')}</option></select>
+ <input id='pf_ct2' class='acf' maxlength='40' placeholder='${T3('Nom du pays','Non peyi a','Country name')}' value='${other?v(i.country):''}' style='display:${other?'block':'none'}'>
+ <div class='two'><div><label>🏙 ${T3('Ville','Vil','City')}</label><input id='pf_city' class='acf' maxlength='60' value='${v(i.city)}'></div><div><label>💼 ${T3('Métier','Metye','Job')}</label><input id='pf_job' class='acf' maxlength='60' value='${v(i.job)}'></div></div>
+ <label>📞 ${T3('Numéro WhatsApp (avec l’indicatif : +509, +1…)','Nimewo WhatsApp (ak endikatif : +509, +1…)','WhatsApp number (with country code: +509, +1…)')}</label><input id='pf_ph' class='acf' type='tel' inputmode='tel' maxlength='30' placeholder='+509 …' value='${v(i.phone)}'>
+ <label class='ck'><input type='checkbox' id='pf_pv' ${i.pv===false?'':'checked'}>${T3('La famille peut voir mon numéro','Fanmi an ka wè nimewo mwen','Family can see my number')}</label>
+ <label>✉️ ${T3('Adresse e-mail','Adrès imèl','Email address')}</label><input id='pf_em' class='acf' type='email' maxlength='120' placeholder='nom@exemple.com' value='${v(i.email||acctMail)}'>
+ <label class='ck'><input type='checkbox' id='pf_ev' ${i.ev===false?'':'checked'}>${T3('La famille peut voir mon e-mail','Fanmi an ka wè imèl mwen','Family can see my email')}</label>
+ ${anon?`<label class='ck'><input type='checkbox' id='pf_login' checked>${T3('L’utiliser aussi pour me reconnecter si je change de téléphone (conseillé)','Sèvi ak li tou pou m rekonekte si m chanje telefòn (konseye)','Also use it to sign back in if I change phones (recommended)')}</label>`:''}
+ <div class='row' style='justify-content:flex-end;gap:8px;margin-top:14px'><button class='pill gh' data-oa='x'>${first?T3('Plus tard','Pita','Later'):T3('Annuler','Anile','Cancel')}</button><button class='pill' data-infosave='1'>${T3('Enregistrer','Anrejistre','Save')}</button></div></div>`)}
+document.addEventListener('change',e=>{if(e.target.id==='pf_ct'){const o=document.getElementById('pf_ct2');if(o)o.style.display=e.target.value==='*'?'block':'none'}});
+const rI=render;render=function(){rI();if(!SB||!READY)return;
+ if(tab==='me'&&ptab==='about'){const id=pv&&by[pv]?pv:me;const d=document.getElementById('me'),pc=d&&d.querySelector('.pcard');if(pc&&by[id]&&!d.querySelector('#infocard')){const h=infoCard(id);if(h)pc.insertAdjacentHTML('afterend',h)}}
+ // première fois : proposer de compléter le profil
+ if(INFOOK&&me!=='admin'&&by[me]&&!by[me].dc){const i=INFO[me]||{};let asked=true;try{asked=localStorage.getItem('bosane-info-'+me)==='1'}catch(_){}
+  if(!i.country&&!i.city&&!i.phone&&!asked&&!window.INFOTM&&!window.NOINFO){window.INFOTM=setTimeout(()=>{window.INFOTM=null;if(document.getElementById('odlg')||document.getElementById('onb')||document.getElementById('invdlg'))return;try{localStorage.setItem('bosane-info-'+me,'1')}catch(_){}infoDlg(true)},2500)}}};
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-infoedit],[data-infosave]');if(!b||!SB)return;e.stopPropagation();e.preventDefault();
+ if(b.dataset.infoedit){infoDlg(false);return}
+ const g=id=>{const x=document.getElementById(id);return x?x.value.trim():''},ck=id=>{const x=document.getElementById(id);return x?x.checked:false};
+ const fn=g('pf_fn');if(!fn)return toast(T3('Le prénom est obligatoire','Non an obligatwa','First name is required'));
+ const ct=g('pf_ct')==='*'?g('pf_ct2'):g('pf_ct'),em=g('pf_em'),ph=g('pf_ph');
+ if(em&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))return toast(T3('Adresse e-mail invalide','Adrès imèl la pa bon','Invalid email address'));
+ b.disabled=true;
+ const r1=await SB.from('profiles').update({first_name:fn.slice(0,40),last_name:g('pf_ln')||null,nickname:g('pf_nick')||null,country:ct||null,city:g('pf_city')||null,profession:g('pf_job')||null}).eq('id',MYDB);
+ const r2=await SB.from('profile_private').upsert({profile_id:MYDB,phone:ph||null,email:em||null,phone_visible:ck('pf_pv'),email_visible:ck('pf_ev'),updated_at:new Date().toISOString()},{onConflict:'profile_id'});
+ if(r1.error||r2.error){b.disabled=false;return toast((r1.error||r2.error).message)}
+ let extra='';if(em&&ck('pf_login')){const r3=await SB.auth.updateUser({email:em});extra=r3.error?'':' '+T3('📩 Touchez le lien reçu par e-mail pour confirmer votre adresse.','📩 Peze lyen ou resevwa pa imèl la pou konfime adrès ou.','📩 Tap the link in the email to confirm your address.')}
+ try{localStorage.setItem('bosane-info-'+me,'1')}catch(_){}odlg(null);toast(T3('✅ Profil enregistré.','✅ Pwofil anrejistre.','✅ Profile saved.')+extra);kickSync(0,true)},true);
 
 BOOT().finally(hideSplash);setTimeout(hideSplash,7000);
 const wr0=document.querySelector('.wrap');if(wr0)wr0.scrollLeft=(wr0.scrollWidth-wr0.clientWidth)/2;

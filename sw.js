@@ -1,8 +1,8 @@
 // BoSane — service worker : l'application s'ouvre même avec une connexion faible.
 // Changez ce numéro à chaque nouvelle version de index.html.
-const VERSION = 'bosane-v7';
+const VERSION = 'bosane-v10';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './badge-96.png',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'];
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => Promise.allSettled(SHELL.map(u => c.add(u)))).then(() => self.skipWaiting()));

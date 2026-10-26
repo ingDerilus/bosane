@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://mofdfecdiyigeufpnktk.supabase.co; media-src 'self' data: blob: https://mofdfecdiyigeufpnktk.supabase.co; connect-src 'self' data: blob: https://mofdfecdiyigeufpnktk.supabase.co wss://mofdfecdiyigeufpnktk.supabase.co https://cdn.jsdelivr.net; worker-src 'self'; manifest-src 'self' data:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="L’espace privé de la famille de Bob &amp; Rosane : photos, nouvelles, anniversaires et souvenirs.">
@@ -378,7 +379,7 @@ audio{display:block;width:240px;max-width:100%;height:38px;margin-top:4px}
 <input type='file' id='fstory' accept='image/*' hidden>
 <div id='stv'></div>
 <p class="note">Personnes fictives, pour la démonstration. Dans la vraie application, chaque membre sera relié à ses parents et à son conjoint lors de son inscription.</p>
-<script src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'></script>
+<script src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0'></script>
 <script>
 // ===== Application obligatoire sur téléphone et tablette =====
 (function(){
@@ -1472,7 +1473,7 @@ if(id==='aretry')location.reload();
 if(id==='alogout')LOGOUT();
 if(id==='aclose'){document.getElementById('auth').classList.add('hide')}
 if(id==='aclaimbtn'){const v=document.getElementById('aclaim').value.trim();if(!v)return;b.disabled=true;
-  const {data,error}=await SB.rpc('claim_invitation',{p_code:v});if(error)return authScreen('claim',error.message,!!MYDB||ISADM);
+  const {data,error}=await SB.rpc('claim_invitation',{p_code:v});if(error||!data)return authScreen('claim',error?error.message:T3('Code invalide, déjà utilisé, ou pas encore validé','Kòd la pa bon, li deja sèvi, oswa li poko valide','Invalid, already used, or not yet approved code'),!!MYDB||ISADM);
   MYDB=data;me=L(MYDB);FIRST=true;await reload(true);document.getElementById('auth').classList.add('hide');toast(T3('Bienvenue dans la famille 🎉','Byenveni nan fanmi an 🎉','Welcome to the family 🎉'))}});
 document.getElementById('auth').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const b=document.querySelector('#abody .pill');if(b)b.click()});
 
@@ -1548,17 +1549,17 @@ if(r.kind==='birthday')p.sys={k:'birthday',id:L(r.subject_id)};
 if(r.kind==='memorial')p.sys={k:'memorial',id:L(r.subject_id)};
 if(r.kind==='event')p.sys={k:'event',ev:{title:esc(r.event_title||''),iso:r.event_date||'',place:esc(r.event_place||'')}};
 if(!p.mem)delete p.mem;P2.set(r.id,p);posts.push(p)});
-prx.forEach(x=>{const p=P2.get(x.post_id);if(p)p.r[L(x.member_id)]=x.emoji});
+prx.forEach(x=>{const p=P2.get(x.post_id);if(p)p.r[L(x.member_id)]=esc(x.emoji)});
 rep.forEach(x=>{const p=P2.get(x.post_id);if(p)p.rb.push(L(x.reporter_id))});
 rsv.forEach(x=>{const p=P2.get(x.post_id);if(p)p.rv[L(x.member_id)]=x.answer});
 const C=new Map();co.forEach(r=>C.set(r.id,{dbid:r.id,pid:r.post_id,par:r.parent_id,a:L(r.author_id),t:esc(r.body||''),au:U(r.audio_path),ap:r.audio_path,ed:!!r.edited_at,x:r.hidden?1:0,r:{},re:[]}));
-crx.forEach(x=>{const c=C.get(x.comment_id);if(c)c.r[L(x.member_id)]=x.emoji});
+crx.forEach(x=>{const c=C.get(x.comment_id);if(c)c.r[L(x.member_id)]=esc(x.emoji)});
 const top=c=>{let k=c;while(k.par&&C.get(k.par))k=C.get(k.par);return k};
 C.forEach(c=>{const p=P2.get(c.pid);if(!p)return;if(!c.par||!C.get(c.par))p.c.push(c);else top(c).re.push(c)});
 posts.forEach(p=>{p.l=Object.keys(p.r)});
 MSG.length=0;ms.forEach(r=>MSG.push({i:r.id,dbid:r.id,f:L(r.sender_id),to:L(r.recipient_id),h:hh(r.created_at),t:esc(r.body||''),au:U(r.audio_path),ap:r.audio_path,im:U(r.image_path),ip:r.image_path,vd:U(r.video_path),vp:r.video_path,ed:!!r.edited_at,rd:r.read_at?1:0,q:r.reply_to,ol:'fr'}));
 STORIES.length=0;st.filter(r=>!pendDel.has('s'+r.id)).forEach(r=>STORIES.push({id:'d'+r.id,dbid:r.id,a:L(r.author_id),ts:Date.parse(r.created_at),t:esc(r.body||''),bg:r.bg||0,img:U(r.image_path),ip:r.image_path}));
-Object.keys(SR).forEach(k=>delete SR[k]);srx.forEach(x=>{(SR['d'+x.story_id]=SR['d'+x.story_id]||{})[L(x.member_id)]=x.emoji});
+Object.keys(SR).forEach(k=>delete SR[k]);srx.forEach(x=>{(SR['d'+x.story_id]=SR['d'+x.story_id]||{})[L(x.member_id)]=esc(x.emoji)});
 const ML=meL();sv.forEach(x=>{if(L(x.member_id)===ML)SEEN.add('d'+x.story_id)});
 Q=inv.filter(r=>r.status==='pending').map(r=>({id:'i'+r.id,dbid:r.id,n:esc(r.first_name),g:r.gender,type:r.relation,anchor:L(r.anchor_id),via:L(r.via_id),op:L(r.other_parent_id)})).filter(q=>by[q.anchor]&&(q.type!=='cousin'||by[q.via]));
 CODES=inv.filter(r=>r.status==='approved'&&r.code).map(r=>({n:esc(r.first_name),code:r.code,m:L(r.member_id),by:r.created_by,an:L(r.anchor_id)}));
@@ -1629,6 +1630,7 @@ if(ISADM){P.forEach(p=>{if(S.dc.has(p.id)&&!!p.dc!==S.dc.get(p.id)){S.dc.set(p.i
   LOG.forEach(l=>{if(!l.dbid&&!l.sending){l.sending=1;run(async()=>ok(await T('admin_log').insert({action:unesc(l.x[0]).slice(0,300)})))}})}
 let err=null;for(const f of ops){try{await f()}catch(e){err=err||e}}
 syncing=false;
+if(err&&isNetErr(err)){unsend();toast(T3('📶 Pas de connexion internet. Ce que vous avez écrit sera envoyé dès le retour du réseau.','📶 Pa gen entènèt. Sa w ekri a ap pati lè rezo a tounen.','📶 No internet connection. What you wrote will be sent as soon as you are back online.'));if(againSync){againSync=false}return}
 if(err)toast(T3('Enregistrement impossible : ','Anrejistreman pa mache : ','Could not save: ')+(err.message||err));
 if(ops.length||force)await reload();else if(later)kickSync(5200);
 if(againSync){againSync=false;kickSync(300)}}
@@ -2314,7 +2316,7 @@ async function loadGroups(){if(!SB||!MYDB)return;try{
  GROUPS=(g.data||[]).map(r=>{const mem=(m.data||[]).filter(y=>y.group_id===r.id);const mine=mem.find(y=>L(y.member_id)===ML);
   const msgs=(x.data||[]).filter(y=>y.group_id===r.id).reverse().map(y=>({id:y.id,a:L(y.sender_id),t:esc(y.body||''),au:U(y.audio_path),im:U(y.image_path),vd:U(y.video_path),ap:y.audio_path,ip:y.image_path,vp:y.video_path,ts:Date.parse(y.created_at),ed:!!y.edited_at}));
   const lr=mine?Date.parse(mine.last_read_at):(r.kind==='family'?Date.parse(r.created_at):0);
-  return {id:r.id,name:esc(r.name),emoji:r.emoji,kind:r.kind,by:L(r.created_by),members:r.kind==='family'?P.filter(p=>p.acc&&!p.dc).map(p=>p.id):mem.map(y=>L(y.member_id)),muted:!!(mine&&mine.muted),hasRow:!!mine,lr,msgs,unread:msgs.filter(y=>y.a!==ML&&y.ts>lr).length}})}catch(e){}}
+  return {id:r.id,name:esc(r.name),emoji:esc(r.emoji||'👥'),kind:r.kind,by:L(r.created_by),members:r.kind==='family'?P.filter(p=>p.acc&&!p.dc).map(p=>p.id):mem.map(y=>L(y.member_id)),muted:!!(mine&&mine.muted),hasRow:!!mine,lr,msgs,unread:msgs.filter(y=>y.a!==ML&&y.ts>lr).length}})}catch(e){}}
 const rlG=reload;reload=async function(){await rlG.apply(this,arguments);if(READY){await loadGroups();INTERNAL=true;try{render()}finally{INTERNAL=false}}};
 const gUnread=()=>GROUPS.filter(g=>!g.muted).reduce((n,g)=>n+g.unread,0);
 const gPrev=m=>m?(m.t?unesc(m.t).slice(0,60):m.vd?'🎬 '+T3('Vidéo','Videyo','Video'):m.im?'📷 '+T3('Photo','Foto','Photo'):'🎤 '+T3('Vocal','Vokal','Voice')):T3('Aucun message','Pa gen mesaj','No messages');
@@ -2325,13 +2327,13 @@ const mlG=mlistHtml;mlistHtml=function(){return msq.trim()?mlG():groupsCard()+ml
 const hm=ts=>{const d=new Date(ts),t=d.toLocaleTimeString(lang==='en'?'en-US':'fr-FR',{hour:'2-digit',minute:'2-digit'});return Date.now()-ts<20*HR?t:d.toLocaleDateString(lang==='en'?'en-US':'fr-FR',{day:'numeric',month:'short'})+' '+t};
 function groupThreadHtml(g){const ML=meL();
  return card(`<div class='ghead'><button class='pill gh' data-gback='1'>←</button><span class='gav'>${g.emoji}</span><div style='flex:1;min-width:0'><b>${g.name}</b>${g.muted?' 🔕':''}<div class='path'>${g.kind==='family'?T3('Toute la famille','Tout fanmi an','Whole family'):g.members.map(x=>by[x]?by[x].n:'').filter(Boolean).slice(0,5).join(', ')+(g.members.length>5?'…':'')} · ${g.members.length} ${T3('membres','manm','members')}</div></div><button class='ib' data-gset='${g.id}' aria-label='${T3('Réglages du groupe','Paramèt gwoup la','Group settings')}' style='font-size:1.2rem'>⚙️</button></div>
- <div class='msgs' id='gmsgs' style='max-height:58vh;overflow-y:auto;margin-top:8px'>${g.msgs.length?g.msgs.map(m=>{const mine=m.a===ML;return `<div class='gmsg${mine?' me':''}'>${mine?'':av(m.a,28)}<div class='gb'>${mine?'':`<div class='who'>${by[m.a]?by[m.a].n:''}</div>`}${m.vd?`<video controls playsinline preload='${ECO?'none':'metadata'}' src='${m.vd}'></video>`:''}${m.im?`<img src='${m.im}' alt=''>`:''}${m.au?`<audio controls preload='none' src='${m.au}'></audio>`:''}${m.t||''}<div class='gt'>${hm(m.ts)}${m.ed?' · '+T3('modifié','modifye','edited'):''}${mine&&m.id>0?` · <span data-gdel='${m.id}' style='cursor:pointer;text-decoration:underline'>${T3('supprimer','efase','delete')}</span>`:''}${m.id<0?' · ⏳':''}</div></div></div>`}).join(''):`<div class='path' style='text-align:center;padding:20px'>${T3('Écrivez le premier message 👋','Ekri premye mesaj la 👋','Write the first message 👋')}</div>`}</div>
+ <div class='msgs' id='gmsgs' style='max-height:58vh;overflow-y:auto;margin-top:8px'>${g.msgs.length>(window.GSHOW||120)?`<div style='text-align:center;margin:4px 0 8px'><button class='pill gh' data-gmore='1' style='padding:6px 12px'>${T3('Messages plus anciens','Mesaj ki pi ansyen','Older messages')}</button></div>`:''}${g.msgs.length?g.msgs.slice(-(window.GSHOW||120)).map(m=>{const mine=m.a===ML;return `<div class='gmsg${mine?' me':''}'>${mine?'':av(m.a,28)}<div class='gb'>${mine?'':`<div class='who'>${by[m.a]?by[m.a].n:''}</div>`}${m.vd?`<video controls playsinline preload='${ECO?'none':'metadata'}' src='${m.vd}'></video>`:''}${m.im?`<img src='${m.im}' alt=''>`:''}${m.au?`<audio controls preload='none' src='${m.au}'></audio>`:''}${m.t||''}<div class='gt'>${hm(m.ts)}${m.ed?' · '+T3('modifié','modifye','edited'):''}${mine&&m.id>0?` · <span data-gdel='${m.id}' style='cursor:pointer;text-decoration:underline'>${T3('supprimer','efase','delete')}</span>`:''}${m.id<0?' · ⏳':''}</div></div></div>`}).join(''):`<div class='path' style='text-align:center;padding:20px'>${T3('Écrivez le premier message 👋','Ekri premye mesaj la 👋','Write the first message 👋')}</div>`}</div>
  <div class='ie'>${chips()}<div class='fcm' style='align-items:flex-end'><textarea id='gi' class='fi' rows='1' placeholder='${T3('Message au groupe…','Mesaj pou gwoup la…','Message the group…')}'></textarea><button class='ib' data-gatt='1' aria-label='${T3('Photo ou vidéo','Foto oswa videyo','Photo or video')}' style='font-size:1.15rem'>📎</button><button class='ib${REC?' recon':''}' data-vrec='g' data-vt='${g.id}' aria-label='${T3('Message vocal','Mesaj vokal','Voice message')}'>${svg('mic',20)}</button><button class='ib snd' data-gsend='${g.id}' aria-label='${L3('send')}'>${svg('send',18)}</button></div></div>`)}
 async function gMarkRead(g){if(!g)return;const now=new Date().toISOString();g.lr=Date.now();g.unread=0;
  try{if(g.hasRow)await SB.from('group_members').update({last_read_at:now}).match({group_id:g.id,member_id:MYDB});else if(g.kind==='family'){await SB.from('group_members').insert({group_id:g.id,member_id:MYDB,last_read_at:now});g.hasRow=true}}catch(e){}}
 async function gSend(g,fields){const tmp={id:-(++GSEND),a:meL(),t:fields.body?esc(fields.body):'',ts:Date.now(),im:fields._im,vd:fields._vd,au:fields._au};g.msgs.push(tmp);render();
  try{const row={group_id:g.id,sender_id:MYDB,body:fields.body||null};if(fields.imgData)row.image_path=await upload(fields.imgData);if(fields.vfile)row.video_path=await uploadBlob(fields.vfile);if(fields.audio)row.audio_path=await upload(fields.audio);
-  const r=await SB.from('group_messages').insert(row);if(r.error)throw r.error}catch(e){g.msgs=g.msgs.filter(x=>x!==tmp);toast(T3('Envoi impossible : ','Voye a pa mache : ','Could not send: ')+(e.message||e))}
+  const r=await SB.from('group_messages').insert(row);if(r.error)throw r.error}catch(e){g.msgs=g.msgs.filter(x=>x!==tmp);if(isNetErr(e)){if(fields.body){const gi=document.getElementById('gi');if(gi&&!gi.value)gi.value=fields.body}toast(T3('📶 Pas de connexion : message non envoyé. Il est resté dans la case, renvoyez-le plus tard.','📶 Pa gen entènèt : mesaj la pa pati. Li rete nan kaz la, voye l pita.','📶 No connection: message not sent. It is still in the box, send it later.'));return}toast(T3('Envoi impossible : ','Voye a pa mache : ','Could not send: ')+(e.message||e))}
  await loadGroups();await gMarkRead(GROUPS.find(x=>x.id===g.id));render()}
 const svG=saveVoice;saveVoice=function(kind,target,url){if(kind!=='g')return svG(kind,target,url);const g=GROUPS.find(x=>x.id==target);if(g)gSend(g,{audio:url,_au:url})};
 // affichage du fil de groupe et du badge
@@ -2339,7 +2341,7 @@ const rG=render;render=function(){rG();if(!SB||!READY)return;
  const nb=document.querySelector("[data-nav='msg']");if(nb){const n=unreadM()+gUnread();let b=nb.querySelector('.bd');if(n){if(!b){nb.insertAdjacentHTML('beforeend',`<span class='bd'></span>`);b=nb.querySelector('.bd')}b.textContent=n}else if(b)b.remove()}
  if(tab==='inbox'&&sub==='m'&&gv&&me!=='admin'){const g=GROUPS.find(x=>x.id===gv);const d=document.getElementById('inbox');if(!g||!d){gv=null;return}
   const keep=document.getElementById('gi'),val=keep?keep.value:'';const head=d.querySelector('.sub2');d.innerHTML=(head?head.outerHTML:'')+groupThreadHtml(g);
-  const box=document.getElementById('gmsgs');if(box)box.scrollTop=box.scrollHeight;const gi=document.getElementById('gi');if(gi&&val)gi.value=val;
+  const box=document.getElementById('gmsgs');if(box){if(window.GKEEPTOP){window.GKEEPTOP=0;box.scrollTop=0}else box.scrollTop=box.scrollHeight}const gi=document.getElementById('gi');if(gi&&val)gi.value=val;
   if(g.unread)gMarkRead(g);decorateOnline&&decorateOnline()}};
 // actions
 document.body.insertAdjacentHTML('beforeend',"<input type='file' id='fgatt' accept='image/*,video/*' hidden>");
@@ -2361,9 +2363,10 @@ function gSetDlg(g){const ML=meL(),mgr=ISADM||g.by===ML;
  ${item('x','✕',T3('Fermer','Fèmen','Close'))}`);OCUR=null;GNEW={set:g.id}}
 function gAddDlg(g){const ML=meL();const L2=P.filter(x=>x.acc&&!x.dc&&!x.bn&&!g.members.includes(x.id));
  odlg(`<b style='display:block;padding:6px'>➕ ${T3('Ajouter au groupe','Ajoute nan gwoup la','Add to group')}</b><div class='gpick'>${L2.map(x=>`<label><input type='checkbox' value='${x.id}'>${av(x.id,30)}<b style='flex:1'>${x.n}</b></label>`).join('')||`<div class='path' style='padding:12px'>${T3('Tout le monde est déjà dans le groupe.','Tout moun deja nan gwoup la.','Everyone is already in the group.')}</div>`}</div><div class='row' style='justify-content:flex-end;gap:8px'><button class='pill gh' data-oa='x'>${T3('Annuler','Anile','Cancel')}</button><button class='pill' data-gaddok='${g.id}'>${T3('Ajouter','Ajoute','Add')}</button></div>`)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-gmore]');if(!b)return;e.stopPropagation();window.GSHOW=(window.GSHOW||120)+120;window.GKEEPTOP=1;render()},true);
 document.addEventListener('click',async e=>{if(!SB)return;const b=e.target.closest('[data-gopen],[data-gback],[data-gsend],[data-gatt],[data-gnew],[data-gemo],[data-gcreate],[data-gset],[data-gdel],[data-grem],[data-gaddok],[data-oa^="g"]');
  if(!b){const m=e.target.closest('[data-mo],[data-sub]');if(m)gv=null;return}e.stopPropagation();e.preventDefault();const d=b.dataset,T=t=>SB.from(t);
- if(d.gopen){gv=+d.gopen;tab='inbox';sub='m';mv=null;render();return}
+ if(d.gopen){window.GSHOW=120;gv=+d.gopen;tab='inbox';sub='m';mv=null;render();return}
  if(d.gback){gv=null;render();return}
  if(d.gsend){const g=GROUPS.find(x=>x.id==d.gsend),ta=document.getElementById('gi'),v=ta?ta.value.trim():'';if(!g||!v)return;ta.value='';gSend(g,{body:v});return}
  if(d.gatt){document.getElementById('fgatt').click();return}
@@ -2517,7 +2520,8 @@ document.getElementById('auth').addEventListener('click',async e=>{const b=e.tar
  let user=null;try{const s=await SB.auth.getSession();user=s.data.session&&s.data.session.user}catch(_){}
  if(!user){const r=await SB.auth.signInAnonymously();if(r.error){EMAILMODE=true;return authScreen('email',T3('L’entrée directe n’est pas encore activée : utilisez votre e-mail.','Antre dirèk la poko aktive : sèvi ak imèl ou.','Direct entry is not enabled yet: use your email.'))}user=r.data.user}
  const {data,error}=await SB.rpc('claim_invitation',{p_code:code});
- if(error){if(user&&user.is_anonymous){try{await SB.auth.signOut()}catch(_){}}
+ if(error&&/essais|tries/i.test(error.message)){if(user&&user.is_anonymous){try{await SB.auth.signOut()}catch(_){}}return authScreen('start',T3('Trop d’essais. Attendez une heure, ou demandez un nouveau code à votre famille.','Twòp esè. Tann inèdtan, oswa mande fanmi ou yon nouvo kòd.','Too many tries. Wait an hour, or ask your family for a new code.'))}
+ if(error||!data){if(user&&user.is_anonymous){try{await SB.auth.signOut()}catch(_){}}
   return authScreen('start',T3('Ce code n’est pas valide ou a déjà servi. Vérifiez-le. Si vous avez déjà un compte, touchez « J’ai déjà un compte » ci-dessous.','Kòd sa a pa bon oswa li deja sèvi. Verifye l. Si w deja gen yon kont, peze « Mwen deja gen yon kont » anba a.','This code is invalid or already used. Check it. If you already have an account, tap “I already have an account” below.'))}
  try{localStorage.removeItem('bosane-code')}catch(_){}
  UID=user.id;MYDB=data;me=L(MYDB);FIRST=true;await reload(true);document.getElementById('auth').classList.add('hide');live();
@@ -2591,6 +2595,103 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-info
  if(r1.error||r2.error){b.disabled=false;return toast((r1.error||r2.error).message)}
  let extra='';if(em&&ck('pf_login')){const r3=await SB.auth.updateUser({email:em});extra=r3.error?'':' '+T3('📩 Touchez le lien reçu par e-mail pour confirmer votre adresse.','📩 Peze lyen ou resevwa pa imèl la pou konfime adrès ou.','📩 Tap the link in the email to confirm your address.')}
  try{localStorage.setItem('bosane-info-'+me,'1')}catch(_){}odlg(null);toast(T3('✅ Profil enregistré.','✅ Pwofil anrejistre.','✅ Profile saved.')+extra);kickSync(0,true)},true);
+
+// --- réseau coupé : on garde ce qui n'est pas encore envoyé et on réessaie ---
+const isNetErr=e=>/Failed to fetch|NetworkError|Load failed|network|fetch failed|ERR_INTERNET|timeout/i.test(String(e&&(e.message||e)));
+function unsend(){const f=x=>{if(x&&!x.dbid)delete x.sending};posts.forEach(p=>{f(p);const w=c=>{f(c);(c.re||[]).forEach(w)};(p.c||[]).forEach(w)});MSG.forEach(f);STORIES.forEach(f);LOG.forEach(f)}
+const hasPending=()=>posts.some(p=>!p.dbid&&!p.sys)||MSG.some(m=>!m.dbid)||STORIES.some(x=>!x.dbid);
+window.addEventListener('online',()=>{setTimeout(()=>kickSync(0,true),1500)});
+setInterval(()=>{if(navigator.onLine&&hasPending()&&!syncing)kickSync(0)},20000);
+const toast0=toast;let lastNet=0;toast=function(msg,lab,act){if(/📶/.test(String(msg))){if(Date.now()-lastNet<20000)return;lastNet=Date.now()}else if(isNetErr(msg)){if(Date.now()-lastNet<20000)return;lastNet=Date.now();msg=T3('📶 Pas de connexion internet pour le moment. BoSane réessaiera tout seul.','📶 Pa gen entènèt kounye a. BoSane ap eseye ankò poukont li.','📶 No internet connection right now. BoSane will retry by itself.')}return toast0(msg,lab,act)};
+
+// ===== Affichage stable : on ne remplace que ce qui a changé (plus de tremblement) =====
+(function(){
+const IDS=['feed','inbox','me','adm','tree','info','pend','add','navb','tact','brand','rail','logo'];
+const phK=postHtml;postHtml=function(p){const h=phK(p);return h.replace(/^\s*<(div|article)/,m=>m+` data-k='p${p.dbid||p.id}'`)};
+const keyOf=n=>{if(n.nodeType!==1)return null;if(n.id)return '#'+n.id;const k=n.getAttribute('data-k');if(k)return k;
+ if(n.classList.contains('mrow')){const r=n.querySelector('[data-mr]');if(r)return 'm'+r.dataset.mr}
+ if(n.classList.contains('gmsg')){const r=n.querySelector('[data-gdel]');if(r)return 'g'+r.dataset.gdel}
+ return null};
+const MEDIA=/^(IMG|VIDEO|AUDIO|IFRAME)$/;
+function syncAttrs(a,b){for(const at of [...a.attributes])if(!b.hasAttribute(at.name))a.removeAttribute(at.name);
+ for(const at of b.attributes)if(a.getAttribute(at.name)!==at.value)a.setAttribute(at.name,at.value)}
+function morph(a,b){
+ if(a.nodeType!==b.nodeType||a.nodeName!==b.nodeName)return b;
+ if(a.nodeType===3||a.nodeType===8){if(a.nodeValue!==b.nodeValue)a.nodeValue=b.nodeValue;return a}
+ if(a.nodeType!==1||a.tagName==='CANVAS')return b;
+ if(MEDIA.test(a.tagName)){if(a.getAttribute('src')!==b.getAttribute('src'))return b;syncAttrs(a,b);return a}
+ syncAttrs(a,b);
+ if(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){const bg=typeof INTERNAL!=='undefined'&&INTERNAL;if(!bg||(document.activeElement!==a&&!(b.value===''&&a.value))){if(a.type==='checkbox'||a.type==='radio')a.checked=b.checked;else if(a.value!==b.value)a.value=b.value}
+  if(a.tagName!=='TEXTAREA'&&a.tagName!=='SELECT')return a}
+ kids(a,b);return a}
+function kids(a,b){const old=[...a.childNodes],neu=[...b.childNodes],byK=new Map(),used=new Set(),out=[];let i=0;
+ old.forEach(n=>{const k=keyOf(n);if(k&&!byK.has(k))byK.set(k,n)});
+ for(const n of neu){const k=keyOf(n);let c=null;
+  if(k){const o=byK.get(k);if(o&&!used.has(o))c=o}
+  else{while(i<old.length&&(used.has(old[i])||keyOf(old[i])))i++;if(i<old.length&&old[i].nodeName===n.nodeName){c=old[i];i++}}
+  if(c){used.add(c);out.push(morph(c,n))}else out.push(n)}
+ out.forEach((n,j)=>{const cur=a.childNodes[j];if(cur!==n)a.insertBefore(n,cur||null)});
+ while(a.childNodes.length>out.length)a.removeChild(a.lastChild)}
+window.morphKids=kids;
+const rS=render;render=function(){
+ const before={};IDS.forEach(id=>{const el=document.getElementById(id);if(el)before[id]=[...el.childNodes]});
+ let anc=null;try{const vh=innerHeight;for(const el of document.querySelectorAll('#feed [data-k], #me [data-k]')){const r=el.getBoundingClientRect();if(r.bottom>60&&r.top<vh){anc=[el.getAttribute('data-k'),r.top,[...el.parentNode.querySelectorAll(':scope > [data-k]')].map(x=>x.getAttribute('data-k'))];break}}}catch(e){}
+ const sy=window.scrollY,tab0=tab,pv0=typeof pv!=='undefined'?pv:null,mv0=typeof mv!=='undefined'?mv:null,gv0=typeof gv!=='undefined'?gv:null;
+ rS.apply(this,arguments);
+ const same=tab===tab0&&(typeof pv==='undefined'||pv===pv0)&&(typeof mv==='undefined'||mv===mv0)&&(typeof gv==='undefined'||gv===gv0);
+ for(const id of IDS){const el=document.getElementById(id),o=before[id];if(!el||!o||!o.length)continue;
+  const now=[...el.childNodes];if(now.length===o.length&&now.every((n,j)=>n===o[j]))continue;
+  const sc=[];el.querySelectorAll('[id]').forEach(x=>{if(x.scrollHeight>x.clientHeight)sc.push([x.id,x.scrollTop])});
+  const fake=document.createElement(el.tagName);now.forEach(n=>fake.appendChild(n));o.forEach(n=>el.appendChild(n));
+  try{kids(el,fake)}catch(e){el.replaceChildren(...fake.childNodes)}
+  sc.forEach(([i,t])=>{const x=document.getElementById(i);if(x)x.scrollTop=t})}
+ if(!same||window.NOSCROLLFIX||sy<5)return;
+ if(anc){const [k,top,order]=anc;let el=document.querySelector(`[data-k='${k}']`);
+  if(!el){const i=order.indexOf(k);for(let j=i+1;j<order.length&&!el;j++)el=document.querySelector(`[data-k='${order[j]}']`)}
+  if(el){const d=el.getBoundingClientRect().top-top;if(Math.abs(d)>1)window.scrollBy(0,d);return}}
+ if(Math.abs(window.scrollY-sy)>2)window.scrollTo(0,sy)};
+})();
+
+// ===== Bouton Retour du téléphone + reprise à l'endroit où l'on était =====
+(function(){
+const V=()=>({tab,sub:typeof sub!=='undefined'?sub:null,mv:typeof mv!=='undefined'?mv:null,gv:typeof gv!=='undefined'?gv:null,pv:typeof pv!=='undefined'?pv:null,ptab:typeof ptab!=='undefined'?ptab:null,asub:typeof asub!=='undefined'?asub:null,me});
+const KEY=v=>JSON.stringify([v.tab,v.sub,v.mv,v.gv,v.pv,v.ptab,v.asub,v.me]);
+const ROOT=()=>Object.assign(V(),me==='admin'?{tab:'adm',asub:'dash'}:{tab:'feed',mv:null,gv:null,pv:null});
+let NAVOK=false,FROMPOP=false,lastBack=0,curKey='';
+function applyV(v){FROMPOP=true;try{tab=v.tab;if(v.sub!=null)sub=v.sub;mv=v.mv;if(typeof gv!=='undefined')gv=v.gv;pv=v.pv;if(v.ptab)ptab=v.ptab;if(v.asub)asub=v.asub;render();window.scrollTo(0,0)}finally{FROMPOP=false}}
+function closeOverlay(){
+ if(document.getElementById('odlg')){odlg(null);return true}
+ if(document.getElementById('invdlg')&&typeof IVT!=='undefined'&&IVT){IVT=null;drawInv();return true}
+ if(typeof svs!=='undefined'&&svs){svs=null;render();return true}
+ if(typeof cs!=='undefined'&&cs){cs=null;render();return true}
+ if(typeof mnuS!=='undefined'&&mnuS){mnuS=null;renderMenu();return true}
+ const g=document.getElementById('gate');if(g)return true;
+ return false}
+const rN=render;render=function(){rN.apply(this,arguments);if(!NAVOK||FROMPOP)return;const v=V(),k=KEY(v);if(k===curKey)return;curKey=k;try{history.pushState({v},'')}catch(_){}};
+window.addEventListener('popstate',e=>{if(!NAVOK)return;const st=e.state||{};
+ if(closeOverlay()){try{history.pushState({v:V()},'')}catch(_){}return}
+ if(st.v){curKey=KEY(st.v);applyV(st.v);return}
+ // on est revenu au tout début : retour à l'accueil, puis double appui pour quitter
+ const r=ROOT();if(KEY(V())!==KEY(r)){applyV(r);curKey=KEY(r);try{history.pushState({v:r},'')}catch(_){}return}
+ if(Date.now()-lastBack<2500){history.back();return}
+ lastBack=Date.now();toast(T3('Appuyez encore sur Retour pour quitter BoSane','Peze Retounen ankò pou soti nan BoSane','Press Back again to leave BoSane'));try{history.pushState({v:r},'')}catch(_){}});
+// --- mémoriser l'endroit où l'on était ---
+const SAVE='bosane-where';
+function saveWhere(){if(!NAVOK)return;try{localStorage.setItem(SAVE,JSON.stringify({v:V(),y:Math.round(window.scrollY),t:Date.now()}))}catch(_){}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveWhere()});window.addEventListener('pagehide',saveWhere);setInterval(saveWhere,15000);
+// --- brouillons : le texte en cours d'écriture n'est jamais perdu ---
+const DK=id=>id==='nt'?'feed':id==='mi'?'mi-'+mv:id==='gi'?'gi-'+gv:null;
+document.addEventListener('input',e=>{const t=e.target,k=DK(t.id);if(!k)return;try{if(t.value)localStorage.setItem('bosane-draft-'+k,t.value);else localStorage.removeItem('bosane-draft-'+k)}catch(_){}});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-pub],[data-ms],[data-gsend]');if(!b)return;const k=b.dataset.pub?'feed':b.dataset.ms?'mi-'+mv:'gi-'+gv;try{localStorage.removeItem('bosane-draft-'+k)}catch(_){}},true);
+const rD=render;render=function(){rD.apply(this,arguments);['nt','mi','gi'].forEach(id=>{const t=document.getElementById(id),k=DK(id);if(!t||!k||t.value)return;let d=null;try{d=localStorage.getItem('bosane-draft-'+k)}catch(_){}if(d)t.value=d})};
+// --- au démarrage, une fois connecté : reprendre là où l'on était (moins de 3 h) ---
+const openedFromNotif=typeof OPEN0!=='undefined'&&!!OPEN0;
+const rlN=reload;reload=async function(){await rlN.apply(this,arguments);if(!READY||NAVOK)return;
+ let w=null;try{w=JSON.parse(localStorage.getItem(SAVE)||'null')}catch(_){}
+ if(w&&!openedFromNotif&&Date.now()-w.t<3*3600e3&&w.v&&w.v.me===me){const v=w.v;
+  if((!v.mv||by[v.mv])&&(!v.pv||by[v.pv])&&(!v.gv||(typeof GROUPS!=='undefined'&&GROUPS.some(g=>g.id===v.gv)))){applyV(v);setTimeout(()=>window.scrollTo(0,w.y||0),80)}}
+ try{history.replaceState({g:1},'');curKey=KEY(V());history.pushState({v:V()},'')}catch(_){}NAVOK=true};
+})();
 
 BOOT().finally(hideSplash);setTimeout(hideSplash,7000);
 const wr0=document.querySelector('.wrap');if(wr0)wr0.scrollLeft=(wr0.scrollWidth-wr0.clientWidth)/2;

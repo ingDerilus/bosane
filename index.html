@@ -1991,7 +1991,7 @@ if(a==='noimg'){r=await T('posts').update({image_path:null}).eq('id',id);if(!r.e
 if(a==='noau'){r=await T(tbl).update({audio_path:null}).eq('id',id);if(!r.error){rmFiles([obj.ap]);toast(T3('Message vocal retiré','Mesaj vokal retire','Voice message removed'))}}
 if(a==='hide'||a==='unhide'){r=await T('comments').update({hidden:a==='hide'}).eq('id',id);if(!r.error){await T('admin_log').insert({action:a==='hide'?'Commentaire masqué':'Commentaire rétabli'});toast(a==='hide'?T3('Commentaire masqué','Kòmantè kache','Comment hidden'):T3('Commentaire rétabli','Kòmantè retabli','Comment restored'))}}
 if(a==='del'){const q={p:T3('Supprimer cette publication et ses commentaires ?','Efase piblikasyon sa a ak kòmantè l yo ?','Delete this post and its comments?'),c:T3('Supprimer ce commentaire et ses réponses ?','Efase kòmantè sa a ak repons li yo ?','Delete this comment and its replies?'),m:T3('Supprimer ce message ? Il disparaîtra aussi chez votre correspondant.','Efase mesaj sa a ? L ap disparèt lakay lòt moun nan tou.','Delete this message? It will also disappear for the other person.'),s:T3('Supprimer cette story ?','Efase istwa sa a ?','Delete this story?')}[o.t];
- if(!confirm(q))return;r=await T(tbl).delete().eq('id',id);
+ if(!confirm(q))return;if(o.t!=='s'&&window.undoWait){odlg(null);OCUR=null;const sel=o.t==='p'?`[data-k='p${obj.dbid||obj.id}']`:o.t==='m'?`.mrow:has([data-mr='${obj.i}'])`:'[data-uxnone]';const lab={p:T3('🗑 Publication supprimée','🗑 Piblikasyon efase','🗑 Post deleted'),c:T3('🗑 Commentaire supprimé','🗑 Kòmantè efase','🗑 Comment deleted'),m:T3('🗑 Message supprimé','🗑 Mesaj efase','🗑 Message deleted')}[o.t];if(!(await undoWait(sel,lab)))return}r=await T(tbl).delete().eq('id',id);
  if(!r.error){const mine=obj.a===meL()||obj.f===meL();rmFiles([obj.ip,obj.ap,obj.vp]);if(!mine&&ISADM)await T('admin_log').insert({action:{p:'Publication supprimée par l’admin',c:'Commentaire supprimé par l’admin',s:'Story supprimée par l’admin'}[o.t]||'Suppression'});
   if(o.t==='s'&&svs){svs=null;renderStory()}if(o.t==='p'&&cs===obj.id)cs=null;
   toast({p:T3('Publication supprimée','Piblikasyon efase','Post deleted'),c:T3('Commentaire supprimé','Kòmantè efase','Comment deleted'),m:T3('Message supprimé','Mesaj efase','Message deleted'),s:T3('Story supprimée','Istwa efase','Story deleted')}[o.t])}}
@@ -2316,7 +2316,7 @@ async function loadGroups(){if(!SB||!MYDB)return;try{
  GROUPS=(g.data||[]).map(r=>{const mem=(m.data||[]).filter(y=>y.group_id===r.id);const mine=mem.find(y=>L(y.member_id)===ML);
   const msgs=(x.data||[]).filter(y=>y.group_id===r.id).reverse().map(y=>({id:y.id,a:L(y.sender_id),t:esc(y.body||''),au:U(y.audio_path),im:U(y.image_path),vd:U(y.video_path),ap:y.audio_path,ip:y.image_path,vp:y.video_path,ts:Date.parse(y.created_at),ed:!!y.edited_at}));
   const lr=mine?Date.parse(mine.last_read_at):(r.kind==='family'?Date.parse(r.created_at):0);
-  return {id:r.id,name:esc(r.name),emoji:esc(r.emoji||'👥'),kind:r.kind,by:L(r.created_by),members:r.kind==='family'?P.filter(p=>p.acc&&!p.dc).map(p=>p.id):mem.map(y=>L(y.member_id)),muted:!!(mine&&mine.muted),hasRow:!!mine,lr,msgs,unread:msgs.filter(y=>y.a!==ML&&y.ts>lr).length}})}catch(e){}}
+  return {id:r.id,name:r.kind==='family'?T3('Toute la famille','Tout fanmi an','The whole family'):esc(r.name),emoji:esc(r.emoji||'👥'),kind:r.kind,by:L(r.created_by),members:r.kind==='family'?P.filter(p=>p.acc&&!p.dc).map(p=>p.id):mem.map(y=>L(y.member_id)),muted:!!(mine&&mine.muted),hasRow:!!mine,lr,msgs,unread:msgs.filter(y=>y.a!==ML&&y.ts>lr).length}})}catch(e){}}
 const rlG=reload;reload=async function(){await rlG.apply(this,arguments);if(READY){await loadGroups();INTERNAL=true;try{render()}finally{INTERNAL=false}}};
 const gUnread=()=>GROUPS.filter(g=>!g.muted).reduce((n,g)=>n+g.unread,0);
 const gPrev=m=>m?(m.t?unesc(m.t).slice(0,60):m.vd?'🎬 '+T3('Vidéo','Videyo','Video'):m.im?'📷 '+T3('Photo','Foto','Photo'):'🎤 '+T3('Vocal','Vokal','Voice')):T3('Aucun message','Pa gen mesaj','No messages');
@@ -2327,7 +2327,7 @@ const mlG=mlistHtml;mlistHtml=function(){return msq.trim()?mlG():groupsCard()+ml
 const hm=ts=>{const d=new Date(ts),t=d.toLocaleTimeString(lang==='en'?'en-US':'fr-FR',{hour:'2-digit',minute:'2-digit'});return Date.now()-ts<20*HR?t:d.toLocaleDateString(lang==='en'?'en-US':'fr-FR',{day:'numeric',month:'short'})+' '+t};
 function groupThreadHtml(g){const ML=meL();
  return card(`<div class='ghead'><button class='pill gh' data-gback='1'>←</button><span class='gav'>${g.emoji}</span><div style='flex:1;min-width:0'><b>${g.name}</b>${g.muted?' 🔕':''}<div class='path'>${g.kind==='family'?T3('Toute la famille','Tout fanmi an','Whole family'):g.members.map(x=>by[x]?by[x].n:'').filter(Boolean).slice(0,5).join(', ')+(g.members.length>5?'…':'')} · ${g.members.length} ${T3('membres','manm','members')}</div></div><button class='ib' data-gset='${g.id}' aria-label='${T3('Réglages du groupe','Paramèt gwoup la','Group settings')}' style='font-size:1.2rem'>⚙️</button></div>
- <div class='msgs' id='gmsgs' style='max-height:58vh;overflow-y:auto;margin-top:8px'>${g.msgs.length>(window.GSHOW||120)?`<div style='text-align:center;margin:4px 0 8px'><button class='pill gh' data-gmore='1' style='padding:6px 12px'>${T3('Messages plus anciens','Mesaj ki pi ansyen','Older messages')}</button></div>`:''}${g.msgs.length?g.msgs.slice(-(window.GSHOW||120)).map(m=>{const mine=m.a===ML;return `<div class='gmsg${mine?' me':''}'>${mine?'':av(m.a,28)}<div class='gb'>${mine?'':`<div class='who'>${by[m.a]?by[m.a].n:''}</div>`}${m.vd?`<video controls playsinline preload='${ECO?'none':'metadata'}' src='${m.vd}'></video>`:''}${m.im?`<img src='${m.im}' alt=''>`:''}${m.au?`<audio controls preload='none' src='${m.au}'></audio>`:''}${m.t||''}<div class='gt'>${hm(m.ts)}${m.ed?' · '+T3('modifié','modifye','edited'):''}${mine&&m.id>0?` · <span data-gdel='${m.id}' style='cursor:pointer;text-decoration:underline'>${T3('supprimer','efase','delete')}</span>`:''}${m.id<0?' · ⏳':''}</div></div></div>`}).join(''):`<div class='path' style='text-align:center;padding:20px'>${T3('Écrivez le premier message 👋','Ekri premye mesaj la 👋','Write the first message 👋')}</div>`}</div>
+ <div class='msgs' id='gmsgs' style='max-height:58vh;overflow-y:auto;margin-top:8px'>${g.msgs.length>(window.GSHOW||120)?`<div style='text-align:center;margin:4px 0 8px'><button class='pill gh' data-gmore='1' style='padding:6px 12px'>${T3('Messages plus anciens','Mesaj ki pi ansyen','Older messages')}</button></div>`:''}${g.msgs.length?g.msgs.slice(-(window.GSHOW||120)).map(m=>{const mine=m.a===ML;return `<div class='gmsg${mine?' me':''}' data-gid='${m.id}'>${mine?'':av(m.a,28)}<div class='gb'>${mine?'':`<div class='who'>${by[m.a]?by[m.a].n:''}</div>`}${m.vd?`<video controls playsinline preload='${ECO?'none':'metadata'}' src='${m.vd}'></video>`:''}${m.im?`<img src='${m.im}' alt=''>`:''}${m.au?`<audio controls preload='none' src='${m.au}'></audio>`:''}${m.t||''}<div class='gt'>${hm(m.ts)}${m.ed?' · '+T3('modifié','modifye','edited'):''}${mine&&m.id>0?` · <span data-gdel='${m.id}' style='cursor:pointer;text-decoration:underline'>${T3('supprimer','efase','delete')}</span>`:''}${m.id<0?' · ⏳':''}</div></div></div>`}).join(''):`<div class='path' style='text-align:center;padding:20px'>${T3('Écrivez le premier message 👋','Ekri premye mesaj la 👋','Write the first message 👋')}</div>`}</div>
  <div class='ie'>${chips()}<div class='fcm' style='align-items:flex-end'><textarea id='gi' class='fi' rows='1' placeholder='${T3('Message au groupe…','Mesaj pou gwoup la…','Message the group…')}'></textarea><button class='ib' data-gatt='1' aria-label='${T3('Photo ou vidéo','Foto oswa videyo','Photo or video')}' style='font-size:1.15rem'>📎</button><button class='ib${REC?' recon':''}' data-vrec='g' data-vt='${g.id}' aria-label='${T3('Message vocal','Mesaj vokal','Voice message')}'>${svg('mic',20)}</button><button class='ib snd' data-gsend='${g.id}' aria-label='${L3('send')}'>${svg('send',18)}</button></div></div>`)}
 async function gMarkRead(g){if(!g)return;const now=new Date().toISOString();g.lr=Date.now();g.unread=0;
  try{if(g.hasRow)await SB.from('group_members').update({last_read_at:now}).match({group_id:g.id,member_id:MYDB});else if(g.kind==='family'){await SB.from('group_members').insert({group_id:g.id,member_id:MYDB,last_read_at:now});g.hasRow=true}}catch(e){}}
@@ -2377,7 +2377,7 @@ document.addEventListener('click',async e=>{if(!SB)return;const b=e.target.close
   const r=await SB.rpc('create_group',{p_name:n,p_emoji:GNEW.emoji,p_members:ids});if(r.error){b.disabled=false;return toast(r.error.message)}
   odlg(null);await loadGroups();gv=r.data;tab='inbox';sub='m';mv=null;render();toast(T3('Groupe créé 👥','Gwoup kreye 👥','Group created 👥'));return}
  if(d.gset){const g=GROUPS.find(x=>x.id==d.gset);if(g)gSetDlg(g);return}
- if(d.gdel){if(!confirm(T3('Supprimer ce message pour tout le groupe ?','Efase mesaj sa a pou tout gwoup la ?','Delete this message for the whole group?')))return;const g=GROUPS.find(x=>x.msgs.some(m=>m.id==d.gdel)),m=g&&g.msgs.find(x=>x.id==d.gdel);
+ if(d.gdel){if(!confirm(T3('Supprimer ce message pour tout le groupe ?','Efase mesaj sa a pou tout gwoup la ?','Delete this message for the whole group?')))return;if(window.undoWait&&!(await undoWait(`.gmsg[data-gid='${d.gdel}']`,T3('🗑 Message supprimé','🗑 Mesaj efase','🗑 Message deleted'))))return;const g=GROUPS.find(x=>x.msgs.some(m=>m.id==d.gdel)),m=g&&g.msgs.find(x=>x.id==d.gdel);
   const r=await T('group_messages').delete().eq('id',+d.gdel);if(r.error)return toast(r.error.message);if(m){const ps=[m.ap,m.ip,m.vp].filter(Boolean);if(ps.length)SB.storage.from('media').remove(ps).catch(()=>{})}await loadGroups();render();return}
  const g=GNEW&&GNEW.set?GROUPS.find(x=>x.id===GNEW.set):null;
  if(d.grem&&g){if(!confirm(T3('Retirer ce membre du groupe ?','Retire manm sa a nan gwoup la ?','Remove this member from the group?')))return;const r=await T('group_members').delete().match({group_id:g.id,member_id:D(d.grem)});if(r.error)return toast(r.error.message);await loadGroups();gSetDlg(GROUPS.find(x=>x.id===g.id));return}
@@ -2437,9 +2437,9 @@ async function calDlg(){const today=new Date();today.setHours(0,0,0,0);const ite
   items.push({d,ic:'🎂',t:`${by[p.id].n}`,s:T3(`${d.getFullYear()-b.getFullYear()} ans`,`${d.getFullYear()-b.getFullYear()} an`,`turns ${d.getFullYear()-b.getFullYear()}`),go:'profile:'+p.id})});
  try{const iso=today.toISOString().slice(0,10);const r=await SB.from('posts').select('id,event_title,event_date,event_place').eq('kind','event').gt('event_date',new Date(today.getTime()-864e5).toISOString().slice(0,10));
   (r.data||[]).forEach(e=>{if(!e.event_date)return;const [y,m,dd]=e.event_date.split('-').map(Number);items.push({d:new Date(y,m-1,dd),ic:'📅',t:esc(e.event_title||T3('Événement familial','Evènman fanmi','Family event')),s:esc(e.event_place||''),go:'post:'+e.id})})}catch(e){}
- items.sort((a,b)=>a.d-b.d);const loc=lang==='en'?'en-US':'fr-FR';let cur='',h='';
- items.filter(i=>i.d-today<366*864e5).forEach(i=>{const mk=i.d.toLocaleDateString(loc,{month:'long',year:'numeric'});if(mk!==cur){cur=mk;h+=`<div class='calm'>${mk}</div>`}
-  const dd=Math.round((i.d-today)/864e5);h+=`<div class='cali' data-calgo='${i.go}' style='cursor:pointer'><div class='cald'><b>${i.d.getDate()}</b><small>${i.d.toLocaleDateString(loc,{weekday:'short'})}</small></div><div style='flex:1;min-width:0'><b>${i.ic} ${i.t}</b><div class='path'>${[i.s,dd===0?T3("aujourd’hui","jodi a","today"):dd===1?T3('demain','demen','tomorrow'):T3(`dans ${dd} jours`,`nan ${dd} jou`,`in ${dd} days`)].filter(Boolean).join(' · ')}</div></div></div>`});
+ items.sort((a,b)=>a.d-b.d);const loc=lang==='en'?'en-US':'fr-FR';let cur='',h='';const HTM=['janvye','fevriye','mas','avril','me','jen','jiyè','out','septanm','oktòb','novanm','desanm'],HTD=['dim','len','mad','mèk','jed','van','sam'];
+ items.filter(i=>i.d-today<366*864e5).forEach(i=>{const mk=lang==='ht'?HTM[i.d.getMonth()]+' '+i.d.getFullYear():i.d.toLocaleDateString(loc,{month:'long',year:'numeric'});if(mk!==cur){cur=mk;h+=`<div class='calm'>${mk}</div>`}
+  const dd=Math.round((i.d-today)/864e5);h+=`<div class='cali' data-calgo='${i.go}' style='cursor:pointer'><div class='cald'><b>${i.d.getDate()}</b><small>${lang==='ht'?HTD[i.d.getDay()]:i.d.toLocaleDateString(loc,{weekday:'short'})}</small></div><div style='flex:1;min-width:0'><b>${i.ic} ${i.t}</b><div class='path'>${[i.s,dd===0?T3("aujourd’hui","jodi a","today"):dd===1?T3('demain','demen','tomorrow'):T3(`dans ${dd} jours`,`nan ${dd} jou`,`in ${dd} days`)].filter(Boolean).join(' · ')}</div></div></div>`});
  odlg(`<b style='display:block;padding:6px'>📅 ${T3('Calendrier de la famille','Kalandriye fanmi an','Family calendar')}</b><div class='path' style='padding:0 6px'>${T3('Anniversaires et événements des 12 prochains mois. Rappel envoyé la veille de chaque événement.','Fèt ak evènman 12 pwochen mwa yo. Yon rapèl ap vini lavèy chak evènman.','Birthdays and events for the next 12 months. A reminder is sent the day before each event.')}</div>
  <div style='max-height:62vh;overflow-y:auto'>${h||`<div class='path' style='padding:16px 6px'>${T3('Rien de prévu pour le moment. Ajoutez votre date de naissance dans votre profil 🎂','Pa gen anyen pou kounye a. Ajoute dat nesans ou nan pwofil ou 🎂','Nothing planned yet. Add your birthday in your profile 🎂')}</div>`}</div>
  <div class='row' style='justify-content:flex-end;margin-top:8px'><button class='pill gh' data-oa='x'>${T3('Fermer','Fèmen','Close')}</button></div>`)}
@@ -2545,6 +2545,8 @@ const dIQ=drawInv;drawInv=function(){dIQ();const d=document.getElementById('invd
 let INFO={},INFOOK=false;
 const FLAGS={'Haïti':'🇭🇹','États-Unis':'🇺🇸','Canada':'🇨🇦','France':'🇫🇷','République dominicaine':'🇩🇴','Chili':'🇨🇱','Brésil':'🇧🇷','Bahamas':'🇧🇸','Mexique':'🇲🇽','Belgique':'🇧🇪','Suisse':'🇨🇭','Guadeloupe':'🇬🇵','Martinique':'🇲🇶','Guyane':'🇬🇫','Royaume-Uni':'🇬🇧','Espagne':'🇪🇸','Allemagne':'🇩🇪','Panama':'🇵🇦','Turks-et-Caïcos':'🇹🇨','Cuba':'🇨🇺','Jamaïque':'🇯🇲','Venezuela':'🇻🇪','Argentine':'🇦🇷'};
 const flag=c=>FLAGS[c]||(c?'🌍':'');
+const CTN={'Haïti':['Ayiti','Haiti'],'États-Unis':['Etazini','United States'],'Canada':['Kanada','Canada'],'France':['Lafrans','France'],'République dominicaine':['Repiblik Dominikèn','Dominican Republic'],'Chili':['Chili','Chile'],'Brésil':['Brezil','Brazil'],'Bahamas':['Bahamas','Bahamas'],'Mexique':['Meksik','Mexico'],'Belgique':['Bèljik','Belgium'],'Suisse':['Laswis','Switzerland'],'Guadeloupe':['Gwadloup','Guadeloupe'],'Martinique':['Matinik','Martinique'],'Guyane':['Giyàn','French Guiana'],'Royaume-Uni':['Wayòm Ini','United Kingdom'],'Espagne':['Espay','Spain'],'Allemagne':['Almay','Germany'],'Panama':['Panama','Panama'],'Turks-et-Caïcos':['Turks ak Caicos','Turks and Caicos'],'Cuba':['Kiba','Cuba'],'Jamaïque':['Jamayik','Jamaica'],'Venezuela':['Venezyela','Venezuela'],'Argentine':['Ajantin','Argentina']};
+const ctl=c=>CTN[c]?(lang==='ht'?CTN[c][0]:lang==='en'?CTN[c][1]:c):c;
 document.head.insertAdjacentHTML('beforeend',`<style>.irow{display:flex;gap:12px;align-items:center;padding:9px 2px;border-top:1px solid var(--line)}.irow:first-of-type{border-top:0}.irow .ic{font-size:1.2rem;width:26px;text-align:center}.irow a{color:var(--bl);text-decoration:none;font-weight:600}
 .pf label{display:block;font-size:.85rem;color:var(--mut);margin:10px 4px 2px}.pf .acf{margin:2px 0}.pf .two{display:flex;gap:8px}.pf .two>div{flex:1;min-width:0}.pf .ck{display:flex;align-items:center;gap:8px;font-size:.88rem;margin:4px 4px 0;color:var(--txt)}</style>`);
 async function loadInfo(){if(!SB||!READY)return;try{
@@ -2555,7 +2557,7 @@ const rlI=reload;reload=async function(){await rlI.apply(this,arguments);if(READ
 function infoCard(id){const i=INFO[id]||{},own=id===meL()&&me!=='admin',r=[];
  const row=(ic,h)=>r.push(`<div class='irow'><span class='ic'>${ic}</span><div style='flex:1;min-width:0'>${h}</div></div>`);
  if(i.ln||i.nick)row('🪪',[esc(by[id]?unesc(by[id].n):''),esc(i.ln)].filter(Boolean).join(' ')+(i.nick?` <span class='path'>« ${esc(i.nick)} »</span>`:''));
- if(i.city||i.country)row(flag(i.country),T3('Vit à ','Rete ','Lives in ')+'<b>'+[esc(i.city),esc(i.country)].filter(Boolean).join(', ')+'</b>');
+ if(i.city||i.country)row(flag(i.country),T3('Vit à ','Rete ','Lives in ')+'<b>'+[esc(i.city),esc(ctl(i.country))].filter(Boolean).join(', ')+'</b>');
  if(i.job)row('💼',esc(i.job));
  if(i.phone){const n=i.phone.replace(/[^\d+]/g,'');row('📞',`<a href='https://wa.me/${n.replace(/^\+/,'')}' target='_blank' rel='noopener'>${esc(i.phone)}</a> <span class='path'>· WhatsApp</span>${own&&!i.pv?` <span class='path'>· 🔒 ${T3('visible par vous seul','se ou sèl ki wè l','only you')}</span>`:''}`)}
  if(i.email)row('✉️',`<a href='mailto:${esc(i.email)}'>${esc(i.email)}</a>${own&&!i.ev?` <span class='path'>· 🔒 ${T3('visible par vous seul','se ou sèl ki wè l','only you')}</span>`:''}`);
@@ -2568,7 +2570,7 @@ async function infoDlg(first){const ML=meL(),i=INFO[ML]||{};let anon=false,acctM
  ${first?`<div class='path' style='padding:0 6px'>${T3('Pour que la famille sache où vous êtes et comment vous joindre. Tout est facultatif et modifiable plus tard.','Pou fanmi an konnen kote w ye ak kijan pou jwenn ou. Tout se si w vle, ou ka chanje l pita.','So the family knows where you are and how to reach you. Everything is optional and can be changed later.')}</div>`:''}
  <div class='two'><div><label>${T3('Prénom','Non','First name')}</label><input id='pf_fn' class='acf' maxlength='40' value='${v(i.fn||(by[ML]?unesc(by[ML].n):''))}'></div><div><label>${T3('Nom de famille','Siyati','Last name')}</label><input id='pf_ln' class='acf' maxlength='40' value='${v(i.ln)}'></div></div>
  <label>${T3('Surnom (comment la famille vous appelle)','Ti non (jan fanmi an rele w)','Nickname')}</label><input id='pf_nick' class='acf' maxlength='30' value='${v(i.nick)}'>
- <label>🌍 ${T3('Pays où vous vivez','Peyi kote w rete','Country you live in')}</label><select id='pf_ct' class='acf'><option value=''>—</option>${CTRY.map(c=>`<option ${i.country===c?'selected':''}>${c}</option>`).join('')}<option value='*' ${other?'selected':''}>${T3('Autre…','Lòt…','Other…')}</option></select>
+ <label>🌍 ${T3('Pays où vous vivez','Peyi kote w rete','Country you live in')}</label><select id='pf_ct' class='acf'><option value=''>—</option>${CTRY.map(c=>`<option value='${c}' ${i.country===c?'selected':''}>${ctl(c)}</option>`).join('')}<option value='*' ${other?'selected':''}>${T3('Autre…','Lòt…','Other…')}</option></select>
  <input id='pf_ct2' class='acf' maxlength='40' placeholder='${T3('Nom du pays','Non peyi a','Country name')}' value='${other?v(i.country):''}' style='display:${other?'block':'none'}'>
  <div class='two'><div><label>🏙 ${T3('Ville','Vil','City')}</label><input id='pf_city' class='acf' maxlength='60' value='${v(i.city)}'></div><div><label>💼 ${T3('Métier','Metye','Job')}</label><input id='pf_job' class='acf' maxlength='60' value='${v(i.job)}'></div></div>
  <label>📞 ${T3('Numéro WhatsApp (avec l’indicatif : +509, +1…)','Nimewo WhatsApp (ak endikatif : +509, +1…)','WhatsApp number (with country code: +509, +1…)')}</label><input id='pf_ph' class='acf' type='tel' inputmode='tel' maxlength='30' placeholder='+509 …' value='${v(i.phone)}'>
@@ -2610,7 +2612,7 @@ const IDS=['feed','inbox','me','adm','tree','info','pend','add','navb','tact','b
 const phK=postHtml;postHtml=function(p){const h=phK(p);return h.replace(/^\s*<(div|article)/,m=>m+` data-k='p${p.dbid||p.id}'`)};
 const keyOf=n=>{if(n.nodeType!==1)return null;if(n.id)return '#'+n.id;const k=n.getAttribute('data-k');if(k)return k;
  if(n.classList.contains('mrow')){const r=n.querySelector('[data-mr]');if(r)return 'm'+r.dataset.mr}
- if(n.classList.contains('gmsg')){const r=n.querySelector('[data-gdel]');if(r)return 'g'+r.dataset.gdel}
+ if(n.classList.contains('gmsg')&&n.dataset.gid)return 'g'+n.dataset.gid;
  return null};
 const MEDIA=/^(IMG|VIDEO|AUDIO|IFRAME)$/;
 function syncAttrs(a,b){for(const at of [...a.attributes])if(!b.hasAttribute(at.name))a.removeAttribute(at.name);
@@ -2660,6 +2662,7 @@ const ROOT=()=>Object.assign(V(),me==='admin'?{tab:'adm',asub:'dash'}:{tab:'feed
 let NAVOK=false,FROMPOP=false,lastBack=0,curKey='';
 function applyV(v){FROMPOP=true;try{tab=v.tab;if(v.sub!=null)sub=v.sub;mv=v.mv;if(typeof gv!=='undefined')gv=v.gv;pv=v.pv;if(v.ptab)ptab=v.ptab;if(v.asub)asub=v.asub;render();window.scrollTo(0,0)}finally{FROMPOP=false}}
 function closeOverlay(){
+ if(window.uxClosePhoto&&window.uxClosePhoto())return true;
  if(document.getElementById('odlg')){odlg(null);return true}
  if(document.getElementById('invdlg')&&typeof IVT!=='undefined'&&IVT){IVT=null;drawInv();return true}
  if(typeof svs!=='undefined'&&svs){svs=null;render();return true}
@@ -2691,6 +2694,373 @@ const rlN=reload;reload=async function(){await rlN.apply(this,arguments);if(!REA
  if(w&&!openedFromNotif&&Date.now()-w.t<3*3600e3&&w.v&&w.v.me===me){const v=w.v;
   if((!v.mv||by[v.mv])&&(!v.pv||by[v.pv])&&(!v.gv||(typeof GROUPS!=='undefined'&&GROUPS.some(g=>g.id===v.gv)))){applyV(v);setTimeout(()=>window.scrollTo(0,w.y||0),80)}}
  try{history.replaceState({g:1},'');curKey=KEY(V());history.pushState({v:V()},'')}catch(_){}NAVOK=true};
+})();
+
+// ===== Expérience utilisateur (21 améliorations) =====
+(function(){
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+document.head.insertAdjacentHTML('beforeend',`<style>
+html{overscroll-behavior-y:contain}
+/* 18. zones à toucher confortables */
+.ib,.lk.ib{min-width:44px;min-height:44px}.pill{min-height:44px}.oi{min-height:48px}.nt{min-height:52px}
+.lk.mrp,.omm{min-width:32px;min-height:32px}
+/* 1. barre d'écriture type WhatsApp */
+.uxatt{font-size:1.25rem}
+.fcm.empty [data-ms],.fcm.empty [data-gsend]{display:none}
+.fcm:not(.empty) [data-vrec='m'],.fcm:not(.empty) [data-vrec='g']{display:none}
+textarea#nt,textarea#mi,textarea#gi,textarea#sc,textarea.fi{resize:none;overflow-y:auto;max-height:160px;line-height:1.35}
+/* 3. progression */
+.uxbar{display:block;height:5px;border-radius:3px;background:color-mix(in srgb,var(--txt) 12%,transparent);overflow:hidden;margin-top:4px;min-width:120px}.uxbar i{display:block;height:100%;background:var(--bl);transition:width .3s}
+/* 4. enregistrement vocal */
+#recbar{position:fixed;left:10px;right:10px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:300;background:var(--card);color:var(--txt);border-radius:18px;box-shadow:0 6px 24px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px;padding:10px 12px}
+#recbar .dot{width:12px;height:12px;border-radius:50%;background:#e53935;animation:uxblink 1s infinite}@keyframes uxblink{50%{opacity:.25}}
+#recbar b{font-variant-numeric:tabular-nums;font-size:1.1rem;flex:1}
+/* 5. état des messages */
+.mst{font-size:.72rem;margin-left:6px;opacity:.85;white-space:nowrap}.mst.rd{color:#7fd3ff;opacity:1}
+/* 6. séparateur + bouton ⬇️ */
+.nsep{display:flex;align-items:center;gap:8px;margin:10px 0;font-size:.78rem;font-weight:700;color:var(--bl)}.nsep:before,.nsep:after{content:'';flex:1;height:1px;background:color-mix(in srgb,var(--bl) 40%,transparent)}
+#jdown{position:fixed;right:14px;bottom:calc(150px + env(safe-area-inset-bottom));z-index:120;width:46px;height:46px;border-radius:50%;border:0;background:var(--card);color:var(--txt);box-shadow:0 4px 14px rgba(0,0,0,.22);font-size:1.3rem;display:none}
+/* 7. appui long */
+.mb,.gb{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.uxpress{transform:scale(.97);transition:transform .15s}
+/* 8. visionneuse */
+#pview{position:fixed;inset:0;z-index:400;background:#000;display:flex;align-items:center;justify-content:center;touch-action:none}
+#pview img{max-width:100%;max-height:100%;object-fit:contain;transform-origin:center;will-change:transform;user-select:none;-webkit-user-drag:none}
+#pview .pvt{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 10px 10px;background:linear-gradient(rgba(0,0,0,.6),transparent);color:#fff}
+#pview .pvt span{flex:1;text-align:center;font-size:.9rem;opacity:.85}
+#pview button{background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:22px;min-width:44px;min-height:44px;font-size:1.1rem;padding:0 14px}
+img.pimg,.mmed,.gb img{cursor:zoom-in}
+/* 10. tirer pour actualiser */
+#ptr{position:fixed;top:0;left:50%;z-index:150;transform:translate(-50%,-60px);background:var(--card);color:var(--txt);border-radius:22px;padding:8px 16px;box-shadow:0 4px 14px rgba(0,0,0,.2);font-size:.88rem;font-weight:600;transition:transform .15s;pointer-events:none}
+#ptr.spin:before{content:'↻ ';display:inline-block;animation:uxrot .8s linear infinite}@keyframes uxrot{to{transform:rotate(360deg)}}
+/* 11. squelettes */
+#auth.skel{align-items:flex-start;padding:0}#auth.skel .abox{display:none}
+#skel{width:100%;max-width:640px;margin:0 auto;padding:12px}
+#skel .sk{background:color-mix(in srgb,var(--txt) 9%,transparent);border-radius:10px;position:relative;overflow:hidden}
+#skel .sk:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--card) 70%,transparent),transparent);animation:uxsh 1.3s infinite;transform:translateX(-100%)}@keyframes uxsh{to{transform:translateX(100%)}}
+#skel .skc{background:var(--card);border-radius:16px;padding:14px;margin:10px 0}
+/* 12. hors ligne */
+#offbar{position:fixed;left:0;right:0;top:0;z-index:250;background:#5f6368;color:#fff;text-align:center;font-size:.85rem;padding:calc(6px + env(safe-area-inset-top)) 10px 6px;display:none}
+body.uxoff #offbar{display:block}
+/* 13-17 */
+.uxh{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);margin:10px 4px 2px}
+#ttools{display:flex;gap:8px;align-items:center;margin:8px 10px;position:relative;flex-wrap:wrap}
+#ttools input{flex:1;min-width:150px;font:inherit;padding:10px 12px;border-radius:22px;border:1px solid var(--line);background:var(--card);color:var(--txt)}
+#tsug{position:absolute;top:100%;left:0;right:0;z-index:30;background:var(--card);border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.18);overflow:hidden}
+#tsug button{display:block;width:100%;text-align:left;padding:12px 14px;border:0;background:none;color:var(--txt);font:inherit;border-top:1px solid var(--line);min-height:48px}
+.uxpulse{animation:uxpulse 1.2s 3}@keyframes uxpulse{50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--bl) 35%,transparent)}}
+#startcard .stc{display:flex;flex-wrap:wrap;gap:8px}#startcard .stc .pill{font-size:.9rem}#startcard .stp{display:flex;align-items:center;gap:10px;padding:10px 4px;border-top:1px solid var(--line);cursor:pointer;min-height:48px}
+#startcard .stp.done{opacity:.55}#startcard .stp.done b{text-decoration:line-through}
+#startcard .prog{height:8px;border-radius:4px;background:color-mix(in srgb,var(--txt) 10%,transparent);overflow:hidden;margin:8px 0}#startcard .prog i{display:block;height:100%;background:linear-gradient(90deg,#2e9e5b,#1f6fb2)}
+.uxempty{text-align:center;padding:22px 10px}.uxempty .e{font-size:2.4rem}
+.uxundo{display:none!important}
+</style>`);
+document.body.insertAdjacentHTML('beforeend',`<div id='offbar'>📶 <span id='offtx'></span></div><div id='ptr'></div><button id='jdown' aria-label=''>⬇️</button>`);
+const t=(f,h,e)=>T3(f,h,e);
+const isMe=()=>me!=='admin'&&by[me];
+
+// ---------- 2. la case d'écriture grandit ----------
+function grow(el){if(!el||el.tagName!=='TEXTAREA')return;el.style.height='auto';el.style.height=Math.min(el.scrollHeight+2,160)+'px'}
+function syncEmpty(){$$('.fcm').forEach(f=>{const ta=f.querySelector('textarea,input.fi');f.classList.toggle('empty',!(ta&&ta.value.trim()))})}
+document.addEventListener('input',e=>{if(e.target.tagName==='TEXTAREA')grow(e.target);if(e.target.closest('.fcm'))syncEmpty()});
+
+// ---------- 1. un seul bouton 📎 pour joindre ----------
+function attachMenu(comp){const has=s=>comp.querySelector(s);const it=(k,ic,l)=>`<button class='oi' data-uxa='${k}'><span style='font-size:1.2rem'>${ic}</span>${l}</button>`;
+ window.UXCOMP=comp;
+ odlg(`<b style='display:block;padding:6px 6px 8px'>📎 ${t('Ajouter à ma publication','Ajoute nan piblikasyon mwen','Add to my post')}</b>${has('[data-cam]')?it('cam','📷',t('Photo','Foto','Photo')):''}${has('[data-vpick]')?it('vpick','🎬',t('Vidéo','Videyo','Video')):''}${has('[data-pollnew]')?it('pollnew','📊',t('Sondage','Sondaj','Poll')):''}${it('x','✕',t('Fermer','Fèmen','Close'))}`)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-uxattach],[data-uxa]');if(!b)return;e.stopPropagation();e.preventDefault();
+ if(b.dataset.uxattach){attachMenu(b.closest('.comp'));return}
+ const k=b.dataset.uxa,c=window.UXCOMP;odlg(null);if(k==='x'||!c)return;const tgt=c.querySelector(`[data-${k}]`);if(tgt)setTimeout(()=>tgt.click(),30)},true);
+
+// ---------- 3. progression des vidéos ----------
+let UPCT=null;
+function paintUp(){if(UPCT==null)return;const lab=`⏳ ${t('Envoi','Voye','Uploading')} ${UPCT} %`;
+ $$('.up, .mb .path, .gt').forEach(el=>{if(!/⏳/.test(el.textContent))return;if(el.classList.contains('gt')){el.innerHTML=el.innerHTML.replace(/⏳( \d+ %)?/,'⏳ '+UPCT+' %');return}
+  el.innerHTML=`${lab}<span class='uxbar'><i style='width:${UPCT}%'></i></span>`})}
+const ubX=uploadBlob;uploadBlob=async function(b){if(!(b&&b.type&&b.type.startsWith('video/')))return ubX(b);
+ const ct=(b.type||'video/mp4').split(';')[0],ext=(ct.split('/')[1]||'mp4').replace('quicktime','mov'),path=`${UID}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+ let tok='';try{const s=await SB.auth.getSession();tok=s.data.session&&s.data.session.access_token||''}catch(_){}
+ if(!tok||!/^https:/.test(SB_URL))return ubX(b);
+ UPCT=0;paintUp();
+ try{await new Promise((res,rej)=>{const x=new XMLHttpRequest();x.open('POST',`${SB_URL}/storage/v1/object/media/${path}`);
+  x.setRequestHeader('Authorization','Bearer '+tok);x.setRequestHeader('apikey',SB_KEY);x.setRequestHeader('x-upsert','false');x.setRequestHeader('Content-Type',ct);x.setRequestHeader('cache-control','3600');
+  x.upload.onprogress=ev=>{if(ev.lengthComputable){UPCT=Math.min(99,Math.round(ev.loaded*100/ev.total));paintUp()}};
+  x.onload=()=>x.status>=200&&x.status<300?res():rej(new Error(x.status===413?t('Vidéo trop lourde','Videyo a twò lou','Video too large'):'HTTP '+x.status+' '+(x.responseText||'').slice(0,120)));
+  x.onerror=()=>rej(new Error('Failed to fetch'));x.send(b)});
+  UPCT=100;paintUp();return path}finally{setTimeout(()=>{UPCT=null},600)}};
+
+// ---------- 4. vocal : compteur, annuler, réécouter ----------
+let RT0=0,RTI=null,RCANCEL=false;
+function recBar(){let el=$('#recbar');if(!REC){if(el)el.remove();clearInterval(RTI);RTI=null;return}
+ if(!el){document.body.insertAdjacentHTML('beforeend',`<div id='recbar'><span class='dot'></span><b id='rectm'>0:00</b><button class='pill gh' id='reccx'>✕ ${t('Annuler','Anile','Cancel')}</button><button class='pill' id='recok'>✓ ${t('Terminer','Fini','Done')}</button></div>`)}
+ const s=Math.floor((Date.now()-RT0)/1000);$('#rectm').textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')} · ${t('Enregistrement','Anrejistreman','Recording')}`}
+const rtX=recToggle;recToggle=async function(kind,target){const was=!!REC;await rtX(kind,target);if(!was&&REC){RCANCEL=false;RT0=Date.now();recBar();RTI=setInterval(recBar,500)}else recBar()};
+document.addEventListener('click',e=>{const b=e.target.closest('#reccx,#recok');if(!b)return;e.stopPropagation();if(b.id==='reccx')RCANCEL=true;if(REC)REC.mr.stop();setTimeout(recBar,50)},true);
+const svX=saveVoice;saveVoice=function(kind,target,url){recBar();
+ if(RCANCEL){RCANCEL=false;toast(t('Enregistrement annulé','Anrejistreman anile','Recording cancelled'));render();return}
+ window.UXVOICE={kind,target,url};
+ odlg(`<b style='display:block;padding:6px'>🎤 ${t('Votre message vocal','Mesaj vokal ou','Your voice message')}</b><div class='path' style='padding:0 6px 8px'>${t('Réécoutez-le avant de l’envoyer.','Reekoute l anvan w voye l.','Listen before sending.')}</div><audio controls src='${url}' style='width:100%'></audio>
+ <div class='row' style='justify-content:space-between;gap:8px;margin-top:12px'><button class='pill gh' data-uxv='del'>🗑 ${t('Supprimer','Efase','Delete')}</button><button class='pill' data-uxv='send'>➤ ${t('Envoyer','Voye','Send')}</button></div>`)};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-uxv]');if(!b)return;e.stopPropagation();const v=window.UXVOICE;window.UXVOICE=null;odlg(null);
+ if(b.dataset.uxv==='send'&&v)svX(v.kind,v.target,v.url);else{toast(t('Message vocal supprimé','Mesaj vokal efase','Voice message deleted'));render()}},true);
+
+// ---------- 5. état des messages + messages toast trompeurs ----------
+const tX=toast;toast=function(msg,lab,act){const s=String(msg);
+ if(s===T3('Message envoyé','Mesaj voye','Message sent'))return;
+ if(s===T3('Publication envoyée','Piblikasyon voye','Post published')&&!navigator.onLine)msg='⏳ '+t('Publication enregistrée : elle partira dès le retour du réseau.','Piblikasyon anrejistre : l ap pati lè rezo a tounen.','Post saved: it will be sent when you are back online.');
+ if(/📶/.test(s))setOff(true);
+ return tX(msg,lab,act)};
+function paintStatus(){$$('#inbox .mrow.me').forEach(row=>{const r=row.querySelector('[data-mr]');if(!r)return;const m=MSG.find(x=>x.i==r.dataset.mr);const mb=row.querySelector('.mb');if(!m||!mb)return;
+ const st=!m.dbid?['⏳','']:m.rd?['✓✓','rd']:['✓',''];let s=mb.querySelector('.mst');if(!s){s=document.createElement('span');mb.appendChild(s)}
+ s.className='mst '+st[1];s.textContent=st[0];s.title=!m.dbid?t('Envoi en cours','N ap voye','Sending'):m.rd?t('Lu','Li','Read'):t('Envoyé','Voye','Sent')});
+ $$('#gmsgs .gmsg.me').forEach(row=>{const id=+row.dataset.gid;const tt=row.querySelector('.gt');if(!tt||id<0||tt.querySelector('.mst'))return;tt.insertAdjacentHTML('beforeend',` <span class='mst'>✓</span>`)})}
+
+// ---------- 6. séparateur « Nouveaux messages » + bouton ⬇️ ----------
+let SEPK=null,SEPID=null,SEPDONE=false;
+function preSep(){const k=mv?'m'+mv:(typeof gv!=='undefined'&&gv)?'g'+gv:null;if(k===SEPK)return;SEPK=k;SEPID=null;SEPDONE=false;if(!k||!isMe())return;
+ if(mv){const f=thread(mv).find(m=>m.to===me&&!m.rd);SEPID=f?'m'+f.i:null}
+ else{const g=GROUPS.find(x=>x.id===gv);if(g){const f=g.msgs.find(m=>m.a!==meL()&&m.ts>g.lr&&m.id>0);SEPID=f?'g'+f.id:null}}}
+function paintSep(){$$('.nsep').forEach(x=>x.remove());if(!SEPID)return;
+ const row=SEPID[0]==='m'?(()=>{const r=$(`#inbox [data-mr='${SEPID.slice(1)}']`);return r&&r.closest('.mrow')})():$(`#gmsgs .gmsg[data-gid='${SEPID.slice(1)}']`);
+ if(!row)return;row.insertAdjacentHTML('beforebegin',`<div class='nsep'>${t('Nouveaux messages','Nouvo mesaj','New messages')}</div>`);
+ if(!SEPDONE){SEPDONE=true;setTimeout(()=>{const s=$('.nsep');if(!s)return;const box=$('#gmsgs');if(box&&box.contains(s))box.scrollTop=s.offsetTop-box.offsetTop-20;else s.scrollIntoView({block:'center'})},60)}}
+function jd(){const b=$('#jdown');if(!b)return;let show=false;
+ if(tab==='inbox'&&typeof gv!=='undefined'&&gv){const x=$('#gmsgs');show=!!(x&&x.scrollHeight-x.scrollTop-x.clientHeight>220)}
+ else if(tab==='inbox'&&mv){const ie=$('#inbox .ie');show=!!(ie&&ie.getBoundingClientRect().top>innerHeight+40)}
+ b.style.display=show?'block':'none';b.setAttribute('aria-label',t('Aller en bas','Desann anba','Go to bottom'))}
+window.addEventListener('scroll',jd,{passive:true});document.addEventListener('scroll',e=>{if(e.target.id==='gmsgs')jd()},true);
+document.addEventListener('click',e=>{if(e.target.closest('#jdown')){const x=$('#gmsgs');if(typeof gv!=='undefined'&&gv&&x)x.scrollTo({top:x.scrollHeight,behavior:'smooth'});else{const ie=$('#inbox .ie');if(ie)ie.scrollIntoView({block:'end',behavior:'smooth'})}setTimeout(jd,500)}});
+
+// ---------- 7. appui long sur un message ----------
+let LP=null;
+document.addEventListener('pointerdown',e=>{const b=e.target.closest('#inbox .mb, #gmsgs .gb');if(!b||e.button>0)return;const x=e.clientX,y=e.clientY;
+ LP={b,x,y,tm:setTimeout(()=>{b.classList.add('uxpress');setTimeout(()=>b.classList.remove('uxpress'),200);if(navigator.vibrate)try{navigator.vibrate(30)}catch(_){}msgMenu(b);LP=null},520)}},true);
+const lpStop=()=>{if(LP){clearTimeout(LP.tm);LP=null}};
+document.addEventListener('pointerup',lpStop,true);document.addEventListener('pointercancel',lpStop,true);
+document.addEventListener('pointermove',e=>{if(LP&&(Math.abs(e.clientX-LP.x)>10||Math.abs(e.clientY-LP.y)>10))lpStop()},true);
+document.addEventListener('contextmenu',e=>{if(e.target.closest('#inbox .mb, #gmsgs .gb'))e.preventDefault()},true);
+function msgMenu(b){const row=b.closest('.mrow,.gmsg');const txt=[...b.childNodes].filter(n=>n.nodeType===3||(n.nodeType===1&&!n.matches('.mst,.gt,.who,.mq,audio,video,img')))
+  .map(n=>n.textContent).join('').trim();window.UXMSG={row,txt};
+ const it=(k,ic,l,dg)=>`<button class='oi${dg?' dg':''}' data-uxm='${k}'><span style='font-size:1.2rem'>${ic}</span>${l}</button>`;
+ const mine=row.classList.contains('me');const isG=row.classList.contains('gmsg');
+ odlg(`${!isG&&row.querySelector('[data-mr]')?it('reply','↩',t('Répondre','Reponn','Reply')):''}${txt?it('copy','📋',t('Copier le texte','Kopye tèks la','Copy text')):''}${mine&&!isG&&row.querySelector('[data-om]')?it('edit','✏️',t('Modifier','Modifye','Edit'))+it('del','🗑',t('Supprimer','Efase','Delete'),1):''}${mine&&isG&&row.querySelector('[data-gdel]')?it('gdel','🗑',t('Supprimer','Efase','Delete'),1):''}${it('x','✕',t('Fermer','Fèmen','Close'))}`)}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-uxm]');if(!b)return;e.stopPropagation();e.preventDefault();const k=b.dataset.uxm,m=window.UXMSG;odlg(null);if(!m||k==='x')return;
+ if(k==='copy'){try{await navigator.clipboard.writeText(m.txt);toast(t('Texte copié','Tèks kopye','Text copied'))}catch(_){}return}
+ if(k==='reply'){const r=m.row.querySelector('[data-mr]');if(r)r.click();setTimeout(()=>{const i=$('#mi');if(i)i.focus()},120);return}
+ if(k==='gdel'){const r=m.row.querySelector('[data-gdel]');if(r)r.click();return}
+ const om=m.row.querySelector('[data-om]');if(!om)return;om.click();setTimeout(()=>{const a=$(`#odlg [data-oa='${k==='edit'?'edit':'del'}']`);if(a)a.click()},60)},true);
+
+// ---------- 8-9. visionneuse plein écran + enregistrer ----------
+let PV=null;
+function gallery(img){const scope=img.closest('#feed,#me,#inbox,#sheet')||document;
+ const L=[...scope.querySelectorAll('img.pimg,img.mmed,.gb img')].filter(x=>x.src&&x.offsetParent!==null);return {L,i:Math.max(0,L.indexOf(img))}}
+function pvOpen(img){const g=gallery(img);PV={L:g.L.map(x=>x.src),i:g.i,s:1,x:0,y:0};
+ document.body.insertAdjacentHTML('beforeend',`<div id='pview'><img alt=''><div class='pvt'><button data-pv='x' aria-label='${t('Fermer','Fèmen','Close')}'>✕</button><span></span><button data-pv='save'>⬇ ${t('Enregistrer','Anrejistre','Save')}</button></div></div>`);
+ pvShow()}
+function pvShow(){const v=$('#pview');if(!v||!PV)return;const im=v.querySelector('img');im.src=PV.L[PV.i];PV.s=1;PV.x=PV.y=0;pvT();v.querySelector('.pvt span').textContent=PV.L.length>1?`${PV.i+1} / ${PV.L.length}`:''}
+function pvT(){const im=$('#pview img');if(im)im.style.transform=`translate(${PV.x}px,${PV.y}px) scale(${PV.s})`}
+function pvClose(){const v=$('#pview');if(v)v.remove();PV=null}
+window.uxClosePhoto=()=>{if($('#pview')){pvClose();return true}return false};
+document.addEventListener('click',e=>{const im=e.target.closest('img.pimg,img.mmed,.gb img');if(im&&!e.target.closest('#pview')){e.stopPropagation();e.preventDefault();pvOpen(im)}},true);
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-pv]');if(!b)return;e.stopPropagation();
+ if(b.dataset.pv==='x'){pvClose();return}
+ try{const src=PV.L[PV.i];const bl=await (await fetch(src)).blob();const a=document.createElement('a');a.href=URL.createObjectURL(bl);
+  a.download=`BoSane-${new Date().toISOString().slice(0,10)}-${PV.i+1}.${(bl.type.split('/')[1]||'jpg').replace('jpeg','jpg')}`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast(t('📥 Photo enregistrée dans vos téléchargements','📥 Foto anrejistre nan telechajman ou','📥 Photo saved to your downloads'))}catch(_){toast(t('Enregistrement impossible','Pa ka anrejistre','Could not save'))}},true);
+let G=null;
+document.addEventListener('touchstart',e=>{if(!(e.target.closest&&e.target.closest('#pview'))||e.target.closest('button'))return;const T=e.touches;
+ if(T.length===2){G={pinch:Math.hypot(T[0].clientX-T[1].clientX,T[0].clientY-T[1].clientY),s0:PV.s}}
+ else if(T.length===1){const now=Date.now();if(G&&G.tap&&now-G.tap<300){PV.s=PV.s>1?1:2.5;PV.x=PV.y=0;pvT();G=null;return}G={x:T[0].clientX,y:T[0].clientY,x0:PV.x,y0:PV.y,tap:now}}},{passive:true});
+document.addEventListener('touchmove',e=>{if(!PV||!G||!(e.target.closest&&e.target.closest('#pview')))return;const T=e.touches;
+ if(T.length===2&&G.pinch){PV.s=Math.min(4,Math.max(1,G.s0*Math.hypot(T[0].clientX-T[1].clientX,T[0].clientY-T[1].clientY)/G.pinch));if(PV.s===1)PV.x=PV.y=0;pvT()}
+ else if(T.length===1&&G.x!=null){const dx=T[0].clientX-G.x,dy=T[0].clientY-G.y;if(PV.s>1){PV.x=G.x0+dx;PV.y=G.y0+dy;pvT()}else{PV.x=dx;pvT()}}},{passive:true});
+document.addEventListener('touchend',e=>{if(!PV||!G||!(e.target.closest&&e.target.closest('#pview')))return;if(e.touches.length)return;
+ if(PV.s===1&&G.x!=null){const dx=PV.x;if(Math.abs(dx)>70&&PV.L.length>1){PV.i=(PV.i+(dx<0?1:-1)+PV.L.length)%PV.L.length;pvShow()}else{PV.x=0;pvT()}}
+ if(G)G.x=null},{passive:true});
+document.addEventListener('keydown',e=>{if(!PV)return;if(e.key==='Escape')pvClose();if(e.key==='ArrowRight'||e.key==='ArrowLeft'){PV.i=(PV.i+(e.key==='ArrowRight'?1:-1)+PV.L.length)%PV.L.length;pvShow()}});
+
+// ---------- 10. tirer pour actualiser ----------
+let PT=null;
+const ptr=(h,txt,spin)=>{const p=$('#ptr');p.textContent=txt||'';p.classList.toggle('spin',!!spin);p.style.transform=`translate(-50%,${h}px)`};
+document.addEventListener('touchstart',e=>{if(tab!=='feed'||window.scrollY>2||$('#odlg,#pview,#auth:not(.hide)')||e.touches.length>1)return;PT={y:e.touches[0].clientY,d:0}},{passive:true});
+document.addEventListener('touchmove',e=>{if(!PT)return;PT.d=e.touches[0].clientY-PT.y;if(PT.d<=0){ptr(-60);return}const h=Math.min(PT.d/2,70)-50;
+ ptr(h,PT.d>120?'↻ '+t('Relâchez pour actualiser','Lage pou mete ajou','Release to refresh'):'↓ '+t('Tirez pour actualiser','Rale pou mete ajou','Pull to refresh'))},{passive:true});
+document.addEventListener('touchend',()=>{if(!PT)return;const go=PT.d>120;PT=null;if(!go){ptr(-60);return}
+ ptr(16,t('Actualisation…','N ap mete ajou…','Refreshing…'),true);window.PTRBUSY=Date.now();kickSync(0,true);setTimeout(()=>{if(window.PTRBUSY){window.PTRBUSY=0;ptr(-60)}},6000)});
+
+// ---------- 11. squelettes de chargement ----------
+const aSK=authScreen;authScreen=function(k,err,cancel){aSK(k,err,cancel);const a=$('#auth');if(!a)return;
+ if(k==='wait'){a.classList.add('skel');if(!$('#skel')){const pc=()=>`<div class='skc'><div style='display:flex;gap:10px;align-items:center'><div class='sk' style='width:40px;height:40px;border-radius:50%'></div><div style='flex:1'><div class='sk' style='height:12px;width:40%'></div><div class='sk' style='height:10px;width:25%;margin-top:6px'></div></div></div><div class='sk' style='height:12px;margin-top:14px'></div><div class='sk' style='height:12px;width:80%;margin-top:8px'></div><div class='sk' style='height:150px;margin-top:12px'></div></div>`;
+  a.insertAdjacentHTML('beforeend',`<div id='skel' aria-label='${t('Chargement','Chajman','Loading')}'><div class='sk' style='height:34px;width:120px;margin:6px 0 14px'></div><div class='skc'><div class='sk' style='height:40px;border-radius:22px'></div></div>${pc()}${pc()}</div>`)}}
+ else{a.classList.remove('skel');const s=$('#skel');if(s)s.remove()}};
+
+// ---------- 12. bandeau hors ligne ----------
+function setOff(on){document.body.classList.toggle('uxoff',on);const x=$('#offtx');if(x)x.textContent=t('Hors ligne — ce que vous écrivez partira au retour du réseau','Pa gen rezo — sa w ekri ap pati lè rezo a tounen','Offline — what you write will be sent when you are back online')}
+window.addEventListener('offline',()=>setOff(true));window.addEventListener('online',()=>setTimeout(()=>kickSync(0,true),800));
+if(navigator.onLine===false)setOff(true);
+const rlU=reload;reload=async function(){const t0=Date.now();await rlU.apply(this,arguments);
+ if(navigator.onLine!==false&&(typeof lastNet==='undefined'||lastNet<t0))setOff(false);
+ if(window.PTRBUSY){window.PTRBUSY=0;ptr(-60)}};
+
+// ---------- 13. cloche groupée + tout marquer comme lu ----------
+function paintBell(){if(!(tab==='inbox'&&sub==='n'))return;const box=$('#inbox');const rows=box?[...box.querySelectorAll('.comp > .nt')]:[];if(!rows.length||box.querySelector('.uxh'))return;
+ let L;try{L=notifs()}catch(_){return}if(L.length!==rows.length)return;
+ const lab=h=>h<24?t('Aujourd’hui','Jodi a','Today'):h<168?t('Cette semaine','Semèn sa a','This week'):t('Plus tôt','Pi bonè','Earlier');let last='';
+ rows.forEach((r,i)=>{const l=lab(L[i].h||0);if(l!==last){last=l;r.insertAdjacentHTML('beforebegin',`<div class='uxh'>${l}</div>`)}})}
+function paintReadAll(){if(!(tab==='inbox'&&sub==='m'&&!mv&&!(typeof gv!=='undefined'&&gv))||!isMe())return;const n=unreadM()+(typeof gUnread==='function'?gUnread():0);
+ const ex=$('#uxreadall');if(!n){if(ex)ex.remove();return}if(ex)return;const s2=$('#inbox .sub2');if(s2)s2.insertAdjacentHTML('afterend',`<div id='uxreadall' style='text-align:right;margin:2px 4px 6px'><button class='pill gh' data-uxread='1'>✓ ${t('Tout marquer comme lu','Make tout kòm li','Mark all as read')}</button></div>`)}
+document.addEventListener('click',async e=>{if(!e.target.closest('[data-uxread]'))return;e.stopPropagation();
+ MSG.forEach(m=>{if(m.to===me&&!m.rd)m.rd=1});if(typeof GROUPS!=='undefined')for(const g of GROUPS)if(g.unread&&!g.muted)await gMarkRead(g);
+ render();kickSync(300);toast(t('Tout est marqué comme lu','Tout make kòm li','All marked as read'))},true);
+
+// ---------- 14. recherche classée ----------
+document.addEventListener('input',e=>{if(e.target.id!=='gq')return;const r=$('#sres');if(!r)return;const q=nz(e.target.value||'');
+ if(!q){return}const ppl=r.querySelectorAll('[data-pf]').length;if(ppl)r.insertAdjacentHTML('afterbegin',`<div class='uxh'>👤 ${t('Personnes','Moun','People')}</div>`);
+ const ps=posts.filter(p=>!p.sys&&p.t&&nz(unesc(p.t)).includes(q)).slice(0,6);
+ if(ps.length)[...r.children].forEach(c=>{if(!c.querySelector('[data-pf]')&&/^(Aucun|Pa gen|No )/i.test(c.textContent.trim()))c.remove()});
+ if(ps.length)r.insertAdjacentHTML('beforeend',`<div class='uxh'>📝 ${t('Publications','Piblikasyon','Posts')}</div>`+ps.map(p=>{const s=unesc(p.t);const i=nz(s).indexOf(q);const sn=esc((i>30?'…':'')+s.slice(Math.max(0,i-30),i+70));
+  return `<div class='nt' data-uxpost='${p.id}'>${av(p.a,34)}<div style='flex:1;min-width:0'><b>${by[p.a]?by[p.a].n:'BoSane'}</b><div class='path' style='white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>${sn}</div></div></div>`}).join(''));
+ if(!ppl&&!ps.length&&!r.querySelector('.uxempty'))r.insertAdjacentHTML('beforeend',`<div class='uxempty path'>${t('Aucun résultat','Pa gen rezilta','No results')}</div>`)});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-uxpost]');if(!b)return;e.stopPropagation();const id=b.dataset.uxpost;mnuS=null;renderMenu();tab='feed';render();
+ setTimeout(()=>{const el=$(`#feed [data-open='${id}']`);if(el){const fp=el.closest('.fp')||el;fp.scrollIntoView({block:'center',behavior:'smooth'});fp.classList.add('uxpulse');setTimeout(()=>fp.classList.remove('uxpulse'),3700)}},120)},true);
+
+// ---------- 15. arbre : me retrouver / trouver quelqu'un ----------
+function treeTools(){const tr=$('#tree');if(!tr)return;let tl=$('#ttools');const show=tab==='tree';
+ if(!tl){const host=tr.closest('.wrap')||tr;host.insertAdjacentHTML('beforebegin',`<div id='ttools'></div>`);tl=$('#ttools')}
+ tl.style.display=show?'flex':'none';if(!show||tl.dataset.uxready)return;tl.dataset.uxready=1;
+ tl.innerHTML=`${isMe()?`<button class='pill' data-uxme='1'>📍 ${t('Me retrouver','Jwenn mwen','Find me')}</button>`:''}<input id='tfind' autocomplete='off' placeholder='🔎 ${t('Trouver quelqu’un…','Jwenn yon moun…','Find someone…')}'><div id='tsug' hidden></div>`}
+function focusNode(id){sel=id;render();setTimeout(()=>{const el=$(`#tree .p[data-id='${id}']`);if(!el)return;el.scrollIntoView({block:'center',inline:'center',behavior:'smooth'});el.classList.add('uxpulse');setTimeout(()=>el.classList.remove('uxpulse'),3700)},80)}
+document.addEventListener('input',e=>{if(e.target.id!=='tfind')return;const q=nz(e.target.value),s=$('#tsug');if(!q){s.hidden=true;return}
+ const L=P.filter(x=>nz(x.n).includes(q)).slice(0,6);s.hidden=!L.length;s.innerHTML=L.map(x=>`<button data-uxnode='${x.id}'>${x.dc?'🕊 ':''}${x.n} <span class='path'>${me!=='admin'&&x.id!==me?rel(me,x.id).t||'':''}</span></button>`).join('')});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-uxme],[data-uxnode]');if(!b)return;e.stopPropagation();
+ if(b.dataset.uxme){focusNode(me);return}const s=$('#tsug');if(s)s.hidden=true;const i=$('#tfind');if(i){i.value='';i.blur()}focusNode(b.dataset.uxnode)},true);
+
+// ---------- 16. bien démarrer ----------
+function startCard(){if(tab!=='feed'||!isMe()||!READY)return;let hide=false;try{hide=localStorage.getItem('bosane-start-'+me)==='1'}catch(_){}if(hide)return;
+ const inf=(typeof INFO!=='undefined'&&INFO[me])||{};
+ const S=[['photo','📷',t('Ajouter ma photo','Ajoute foto mwen','Add my photo'),!!PH[me]],
+  ['info','🪪',t('Compléter mon profil','Konplete pwofil mwen','Complete my profile'),!!(inf.country||inf.city||inf.phone||inf.job)],
+  ['push','🔔',t('Activer les notifications','Aktive notifikasyon yo','Turn on notifications'),!!((typeof PUSHON!=='undefined'&&PUSHON)||(window.Notification&&Notification.permission==='granted'))],
+  ['msg','✉️',t('Écrire à un proche','Ekri yon fanmi','Write to a relative'),MSG.some(m=>m.f===me)||(typeof GROUPS!=='undefined'&&GROUPS.some(g=>g.msgs.some(x=>x.a===me)))],
+  ['react','❤️',t('Réagir à une publication','Reyaji sou yon piblikasyon','React to a post'),posts.some(p=>p.r&&p.r[me])]];
+ const n=S.filter(x=>x[3]).length;if(n===S.length){try{localStorage.setItem('bosane-start-'+me,'1')}catch(_){}return}
+ const h=`<div class='comp' id='startcard'><div class='famh'><b>🌱 ${t('Bien démarrer','Byen kòmanse','Getting started')} · ${n}/${S.length}</b><button class='ib' data-uxstart='hide' aria-label='${t('Masquer','Kache','Hide')}'>✕</button></div><div class='prog'><i style='width:${n*100/S.length}%'></i></div><div class='stc'>${S.filter(x=>!x[3]).map(([k,ic,l])=>`<button class='pill gh' data-uxstart='${k}'>${ic} ${l}</button>`).join('')}</div></div>`;
+ const ex=$('#startcard');if(ex)ex.outerHTML=h;else{const cp=$('#feed .comp');if(cp)cp.insertAdjacentHTML('afterend',h)}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-uxstart]');if(!b)return;e.stopPropagation();const k=b.dataset.uxstart;
+ if(k==='hide'){try{localStorage.setItem('bosane-start-'+me,'1')}catch(_){}const c=$('#startcard');if(c)c.remove();return}
+ if(b.classList.contains('done'))return;
+ if(k==='photo'){const f=$('#fphoto');if(f)f.click();return}
+ if(k==='info'&&typeof infoDlg==='function'){infoDlg(false);return}
+ if(k==='push'&&typeof pushEnable==='function'){pushEnable();return}
+ if(k==='msg'){tab='inbox';sub='m';mv=null;render();window.scrollTo(0,0);return}
+ if(k==='react'){const f=$("#feed [data-k^='p'] [data-rx]");if(f){f.closest('.fp').scrollIntoView({block:'center',behavior:'smooth'});f.closest('.fp').classList.add('uxpulse')}}},true);
+
+// ---------- 17. écrans vides accueillants ----------
+const EMPTY=[
+ [/^Aucune publication pour le moment/,()=>`<div class='uxempty'><div class='e'>🌳</div><b>${t('Le fil est encore calme','Fil la poko gen anyen','The feed is still quiet')}</b><div class='path' style='margin:6px 0 12px'>${t('Partagez une nouvelle, une photo ou un souvenir avec la famille.','Pataje yon nouvèl, yon foto oswa yon souvni ak fanmi an.','Share news, a photo or a memory with the family.')}</div><button class='pill' data-uxfocus='nt'>✏️ ${t('Écrire la première nouvelle','Ekri premye nouvèl la','Write the first post')}</button></div>`],
+ [/^Aucune notification pour le moment/,()=>`<div class='uxempty'><div class='e'>🌤</div><b>${t('Rien de nouveau pour l’instant','Pa gen anyen nouvo pou kounye a','Nothing new for now')}</b><div class='path' style='margin-top:6px'>${t('Vous verrez ici les réactions, commentaires, anniversaires et arrivées dans la famille.','W ap wè isit reyaksyon, kòmantè, fèt ak moun ki rive nan fanmi an.','Reactions, comments, birthdays and new arrivals will show up here.')}</div></div>`],
+ [/^Aucune conversation/,()=>`<div class='uxempty'><div class='e'>💬</div><b>${t('Aucune conversation pour l’instant','Pa gen konvèsasyon pou kounye a','No conversations yet')}</b><div class='path' style='margin-top:6px'>${t('Touchez ✉️ à côté d’un proche dans la liste de la famille pour lui écrire.','Peze ✉️ bò kote yon fanmi nan lis la pou ekri l.','Tap ✉️ next to a relative in the family list to write to them.')}</div></div>`]];
+function paintEmpty(){['feed','inbox','me'].forEach(id=>{const root=document.getElementById(id);if(!root||root.style.display==='none')return;
+ const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const hits=[];while(w.nextNode()){const n=w.currentNode;const src=(O.get(n)||n.nodeValue||'').trim();for(const [re,f] of EMPTY)if(re.test(src)){hits.push([n,f]);break}}
+ hits.forEach(([n,f])=>{const box=n.parentElement&&(n.parentElement.closest('.comp')||n.parentElement);if(box&&!box.closest('.uxempty'))box.innerHTML=f()})})}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-uxfocus]');if(!b)return;const i=document.getElementById(b.dataset.uxfocus);if(i){i.scrollIntoView({block:'center'});i.focus()}});
+
+// ---------- 20. annuler une suppression pendant 5 secondes ----------
+const HID=new Set();
+window.undoWait=function(sel,msg){HID.add(sel);paintHide();return new Promise(res=>{let undone=false;
+ tX(msg,t('Annuler','Anile','Undo'),()=>{undone=true;HID.delete(sel);paintHide();render();res(false)});clearTimeout(tT);
+ const el=$('#toast');tT=setTimeout(()=>{el.className=''},5200);setTimeout(()=>{HID.delete(sel);if(!undone)res(true)},5200)})};
+function paintHide(){$$('.uxundo').forEach(x=>x.classList.remove('uxundo'));HID.forEach(s=>{try{$$(s).forEach(x=>x.classList.add('uxundo'))}catch(_){}})}
+
+// ---------- rendu : tout appliquer après chaque affichage ----------
+const rU=render;render=function(){preSep();rU.apply(this,arguments);if(!READY)return;
+ try{
+  // 1. bouton 📎 dans les zones de publication
+  $$('#feed .comp, #me .comp').forEach(c=>{const top=c.querySelector('.top');if(!top||!top.querySelector('textarea'))return;
+   const hid=[...c.querySelectorAll('.top [data-cam], .top [data-vpick], .top [data-pollnew], .bar [data-at], .bar [data-cam]')];if(!hid.length)return;hid.forEach(x=>x.style.display='none');
+   if(!top.querySelector('[data-uxattach]'))top.insertAdjacentHTML('beforeend',`<button class='ib uxatt' data-uxattach='1' aria-label='${t('Joindre une photo, une vidéo ou un sondage','Mete yon foto, yon videyo oswa yon sondaj','Attach a photo, video or poll')}'>📎</button>`)});
+  // conversations : @ dans le menu 📎, micro ↔ envoyer
+  $$('#inbox .fcm [data-at]').forEach(x=>x.style.display='none');
+  $$('textarea').forEach(x=>{if(x.value)grow(x)});syncEmpty();
+  paintStatus();paintSep();paintUp();jd();paintBell();paintReadAll();treeTools();startCard();paintEmpty();paintHide()}catch(e){console.warn('ux',e)}};
+})();
+
+// ===== Barre d'écriture façon WhatsApp + « @ » partout =====
+(function(){
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const I={
+ clip:`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>`,
+ cam:`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></svg>`,
+ emo:`<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3h4a5 5 0 0 1 5 5v4a9 9 0 1 1-9-9z"/><path d="M21 12h-4a5 5 0 0 1-5-5V3"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0"/><circle cx="9" cy="10" r=".8" fill="currentColor"/></svg>`,
+ mic:`<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 0 0-7 0v6A3.5 3.5 0 0 0 12 15z"/><path d="M18.5 11.5a.9.9 0 0 0-1.8 0 4.7 4.7 0 0 1-9.4 0 .9.9 0 0 0-1.8 0 6.5 6.5 0 0 0 5.6 6.4V20H9a.9.9 0 0 0 0 1.8h6a.9.9 0 0 0 0-1.8h-2.1v-2.1a6.5 6.5 0 0 0 5.6-6.4z"/></svg>`,
+ send:`<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M3.4 20.4l17.5-7.5a1 1 0 0 0 0-1.8L3.4 3.6a.8.8 0 0 0-1.1 1L4.5 11 14 12l-9.5 1-2.2 6.4a.8.8 0 0 0 1.1 1z"/></svg>`};
+document.head.insertAdjacentHTML('beforeend',`<style>
+:root{--pillbg:color-mix(in srgb,var(--txt) 7%,transparent);--wagreen:#1daa61}
+/* conversations : [😊 Message 📎 📷] (🎤/➤) */
+.fcm{gap:0!important;align-items:flex-end!important}
+.fcm>textarea,.fcm>input.fi{order:2;border-radius:0!important;margin:0!important;padding:13px 6px!important;min-height:48px;background:var(--pillbg)!important}
+.fcm>.uxemo{order:1;border-radius:24px 0 0 24px!important}
+.fcm>textarea:focus,.fcm>input.fi:focus,.comp .top>textarea:focus{outline:none!important;box-shadow:none!important}.fcm:focus-within>.uxemo,.fcm:focus-within>textarea,.fcm:focus-within>[data-matt],.fcm:focus-within>[data-gatt],.fcm:focus-within>.uxcam{background:color-mix(in srgb,var(--txt) 10%,transparent)!important}
+.fcm>[data-matt],.fcm>[data-gatt]{order:3;border-radius:0!important}
+.fcm>.uxcam{order:4;border-radius:0 24px 24px 0!important}
+.fcm:not(:has(.uxcam))>[data-matt],.fcm:not(:has(.uxcam))>[data-gatt]{border-radius:0 24px 24px 0!important}
+.fcm:not(:has(.uxcam)):not(:has([data-matt])):not(:has([data-gatt]))>textarea{border-radius:0 24px 24px 0!important;padding-right:14px!important}
+.fcm>.uxemo,.fcm>[data-matt],.fcm>[data-gatt],.fcm>.uxcam{background:var(--pillbg)!important;color:var(--mut)!important;min-height:48px;min-width:42px;width:42px;padding:0;border:0}
+.fcm>[data-at]{display:none!important}
+.fcm>[data-vrec],.fcm>.snd{order:5;margin-left:6px!important;width:48px!important;min-width:48px!important;height:48px!important;border-radius:50%!important;background:var(--wagreen)!important;color:#fff!important;border:0;align-self:flex-end}
+.fcm>[data-vrec].recon{background:#e53935!important}
+.ie .emo{display:none}.ie.uxemoon .emo{display:flex}
+/* zone de publication : [avatar] [Quoi de neuf… 📎 📷] */
+.comp .top{gap:0!important;align-items:center}
+.comp .top>.av{margin-right:8px}
+.comp .top>textarea{border-radius:24px 0 0 24px!important;background:var(--pillbg)!important;margin:0!important;min-height:44px}
+.comp .top>.uxatt,.comp .top>.uxcam2{background:var(--pillbg)!important;color:var(--mut)!important;border-radius:0!important;min-height:44px;height:44px;width:42px;min-width:42px;padding:0;border:0;align-self:stretch;height:auto}
+.comp .top>.uxcam2{border-radius:0 24px 24px 0!important}
+.comp .top:not(:has(.uxcam2))>.uxatt{border-radius:0 24px 24px 0!important}
+/* suggestions @ */
+.uxsug{display:flex;flex-wrap:wrap;gap:6px;padding:6px 2px}
+.uxsug button{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);color:var(--txt);border-radius:20px;padding:4px 10px 4px 4px;font:inherit;font-size:.9rem;min-height:40px}
+</style>`);
+const t=(f,h,e)=>T3(f,h,e);
+// ---------- rendu : appliquer le style WhatsApp sans déplacer la case de texte ----------
+function waify(){
+ $$('.fcm').forEach(f=>{const ta=f.querySelector('textarea,input.fi');if(!ta)return;const ie=f.closest('.ie');
+  if(ie&&ie.querySelector('.emo')&&!f.querySelector('.uxemo'))f.insertAdjacentHTML('beforeend',`<button class='ib uxemo' data-uxemo='1' aria-label='${t('Émojis','Emoji','Emoji')}'>${I.emo}</button>`);
+  if(ie)ie.classList.toggle('uxemoon',!!window.UXEMO);
+  const att=f.querySelector('[data-matt],[data-gatt]');
+  if(att){if(!att.querySelector('svg'))att.innerHTML=I.clip;if(!f.querySelector('.uxcam'))f.insertAdjacentHTML('beforeend',`<button class='ib uxcam' data-uxcam='${att.dataset.matt?'fmatt':'fgatt'}' aria-label='${t('Prendre une photo','Pran yon foto','Take a photo')}'>${I.cam}</button>`)}
+  const mic=f.querySelector('[data-vrec]');if(mic&&!mic.dataset.uxw){mic.dataset.uxw=1;mic.innerHTML=I.mic}
+  const snd=f.querySelector('.snd');if(snd&&!snd.dataset.uxw){snd.dataset.uxw=1;snd.innerHTML=I.send}});
+ $$('.comp .top').forEach(top=>{const a=top.querySelector('[data-uxattach]');if(!a)return;if(!a.querySelector('svg'))a.innerHTML=I.clip;
+  const comp=top.closest('.comp');if(comp.querySelector('[data-cam]')&&!top.querySelector('.uxcam2'))top.insertAdjacentHTML('beforeend',`<button class='ib uxcam2' data-uxcam2='1' aria-label='${t('Ajouter une photo','Ajoute yon foto','Add a photo')}'>${I.cam}</button>`)})}
+const rW=render;render=function(){rW.apply(this,arguments);if(READY)try{waify()}catch(e){console.warn(e)}};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-uxemo],[data-uxcam],[data-uxcam2]');if(!b)return;e.stopPropagation();e.preventDefault();
+ if(b.dataset.uxemo){window.UXEMO=!window.UXEMO;const ie=b.closest('.ie');if(ie)ie.classList.toggle('uxemoon',window.UXEMO);const ta=b.closest('.fcm').querySelector('textarea,input.fi');if(ta&&!window.UXEMO)ta.focus();return}
+ if(b.dataset.uxcam2){const c=b.closest('.comp').querySelector('[data-cam]');if(c)c.click();return}
+ const inp=document.getElementById(b.dataset.uxcam);if(!inp)return;const acc=inp.getAttribute('accept');inp.setAttribute('accept','image/*');inp.setAttribute('capture','environment');inp.click();
+ setTimeout(()=>{inp.setAttribute('accept',acc);inp.removeAttribute('capture')},800)},true);
+// les émojis s'insèrent là où se trouve le curseur
+document.addEventListener('click',e=>{const b=e.target.closest('.ie .emo [data-ins]');if(!b)return;const ie=b.closest('.ie');const ta=ie&&ie.querySelector('textarea,input.fi');if(!ta)return;
+ e.stopPropagation();e.preventDefault();const s=ta.selectionStart??ta.value.length,en=ta.selectionEnd??s;ta.value=ta.value.slice(0,s)+b.dataset.ins+ta.value.slice(en);const p=s+b.dataset.ins.length;ta.focus();try{ta.setSelectionRange(p,p)}catch(_){}ta.dispatchEvent(new Event('input',{bubbles:true}))},true);
+
+// ---------- « @ » partout où l'on écrit à la famille ----------
+const FIELDS='#nt,#pn,#mi,#gi,#sc,#mmn,#stx,#oet,textarea.fi,input.fi';
+let MT=null;
+function tokenAt(el){const pos=el.selectionStart??el.value.length;const before=el.value.slice(0,pos);const m=before.match(/(^|[\s(«"'“])@([^\s@]{0,30})$/u);return m?{q:m[2],start:pos-m[2].length-1,end:pos}:null}
+function pool(el){let L=P.filter(x=>x.id!==me&&!x.bn);
+ if(el.id==='gi'&&typeof gv!=='undefined'&&gv&&typeof GROUPS!=='undefined'){const g=GROUPS.find(x=>x.id===gv);if(g&&g.kind!=='family')L=L.filter(x=>g.members.includes(x.id))}
+ return L}
+function showSug(el){$$('.uxsug').forEach(x=>x.remove());const tk=tokenAt(el);if(!tk){MT=null;return}
+ const q=nz(tk.q);const L=pool(el).filter(x=>{const n=nz(x.n);return !q||n.startsWith(q)||n.split(/[\s.\-]+/).some(w=>w.startsWith(q))})
+  .sort((a,b)=>(a.dc?1:0)-(b.dc?1:0)||a.n.localeCompare(b.n)).slice(0,8);
+ document.querySelectorAll('.sug:not(.uxsug)').forEach(x=>x.remove());
+ if(!L.length){MT=null;return}MT={el,tk};
+ const host=el.closest('.top,.fcm')||el;host.insertAdjacentHTML('afterend',`<div class='sug uxsug' role='listbox'>${L.map(x=>`<button data-uxmn='${x.id}'>${av(x.id,30)}<span>${x.n}</span></button>`).join('')}</div>`)}
+document.addEventListener('input',e=>{const el=e.target;if(!el.matches||!el.matches(FIELDS)||el.matches('input[type=email],input[type=tel]'))return;setTimeout(()=>showSug(el),0)});
+document.addEventListener('keyup',e=>{const el=e.target;if(el.matches&&el.matches(FIELDS)&&/Arrow|Home|End/.test(e.key))showSug(el)});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-uxmn]');if(!b){if(!e.target.closest('.uxsug')&&!(e.target.matches&&e.target.matches(FIELDS)))$$('.uxsug').forEach(x=>x.remove());return}
+ e.stopPropagation();e.preventDefault();if(!MT)return;const {el,tk}=MT,p=by[b.dataset.uxmn];if(!p)return;const name=unesc(p.n);
+ const ins='@'+name+' ';el.value=el.value.slice(0,tk.start)+ins+el.value.slice(tk.end);const c=tk.start+ins.length;el.focus();try{el.setSelectionRange(c,c)}catch(_){}
+ $$('.uxsug').forEach(x=>x.remove());MT=null;el.dispatchEvent(new Event('input',{bubbles:true}))},true);
 })();
 
 BOOT().finally(hideSplash);setTimeout(hideSplash,7000);
